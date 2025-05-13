@@ -11,8 +11,8 @@ n = 999999 #nuimero de datos aleatorios
 lati = np.random.uniform(-90, 90, n)
 longi = np.random.uniform(-180, 180, n) 
 
-latitudes = np.round(lati, 4)
-longitudes = np.round(longi, 4)
+latitudes = np.round(lati, 2)
+longitudes = np.round(longi, 2)
 
 
 data = pd.DataFrame({
