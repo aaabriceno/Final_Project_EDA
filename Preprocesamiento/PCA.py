@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 
 #Cagar el archivo CSV columnas de 2 a 21 (atributos)
-X = np.loadtxt('puntos.csv', delimiter=',', skiprows=1, usecols=range(2, 22))
+X = np.loadtxt('Preprocesamiento/puntos.csv', delimiter=',', skiprows=1, usecols=range(2, 22))
 
 n_muestras, n_atributos = X.shape
 # Mostrar la forma de la matriz
@@ -67,7 +67,7 @@ print("Forma de W:",W.shape)  #debería ser (n_atributos, k)
 X_pca = np.dot(X_centro, W)
 
 #Cargas lat y long a la matriz PCA
-latlong = np.loadtxt('puntos.csv', delimiter=',', skiprows=1, usecols=(0, 1))
+latlong = np.loadtxt('Preprocesamiento/puntos.csv', delimiter=',', skiprows=1, usecols=(0, 1))
 
 #Formato de la matriz PCA
 print("Forma de X_pca:", X_pca.shape) 
@@ -79,12 +79,14 @@ X_final = np.hstack((latlong, X_pca))
 print("Forma final con lat, long y PCA:\n", X_final.shape)
 print(X_final[:10])
 
-plt.plot(ratio_varianza_explicada, marker ='o')
+plt.plot(ratio_varianza_explicada, marker='o')
 plt.axvline(x=k-1, color='r', linestyle='--', label=f'k={k}')
-plt.xlabel('Numero de componentes') 
-
-
+plt.xlabel('Número de componentes')
+plt.ylabel('Varianza explicada acumulada')  # No olvides esta línea para el eje y
 plt.title('Curva de varianza explicada')
 plt.legend()
 plt.grid(True)
-plt.show()
+
+# En vez de plt.show(), guarda la figura en un archivo
+plt.savefig('Preprocesamiento/varianza_explicada.png')
+print("Gráfica guardada en 'varianza_explicada.png'")
