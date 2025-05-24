@@ -118,6 +118,7 @@ df_copia = df_final.copy()
 pca_columnas = df_final.columns[2:]  # Atributos PCA
 df_copia[pca_columnas] = df_copia[pca_columnas].round(4)  # Redondear a 4 decimales
 
+
 #Guardar en CSV, datos sin redondear decimales
 #df_final.to_csv('Preprocesamiento/pca_puro.csv', index=False)
 #print("Datos PCA guardados en 'Preprocesamiento/pca.csv'")
@@ -130,7 +131,7 @@ print("Datos PCA guardados en 'Preprocesamiento/pca_4_dec.csv'")
 
 # Graficar varianza explicada
 plt.plot(ratio_varianza_explicada, marker='o')
-plt.axvline(x=k-1, color='r', linestyle='--', label=f'k={k}')
+plt.axvline(x=k-1, color='r', linestyle='--', label=f'k={k}')   
 plt.xlabel('Número de componentes')
 plt.ylabel('Varianza explicada acumulada')  # No olvides esta línea para el eje y
 plt.title('Curva de varianza explicada')

@@ -5,6 +5,7 @@ import numpy as np
 #np.random.randint sirve para generar números enteros aleatorios en un rango específico
 np.random.seed(42)
 
+
 n = 1000000 #nuimero de datos aleatorios
 # Generar datos aleatorios
 #geografía
