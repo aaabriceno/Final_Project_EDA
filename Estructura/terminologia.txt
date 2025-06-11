@@ -1,0 +1,13 @@
+Proyecto del Curso de EDA:
+
+Terminologia
+MBR (Minimum Bounding Rectangle): Es el rectángulo mínimo que cubre un conjunto 
+de objetos en el espacio. Es fundamental para la estructura del R*-Tree, ya que 
+ayuda a realizar consultas espaciales eficientes.
+
+
+SAM (Spatial Access Method): Es una estructura de datos utilizada para organizar 
+datos espaciales en multidimensionalidades, como líneas, puntos o polígonos.
+
+PAM (Point Access Method): Método de acceso diseñado principalmente para búsquedas 
+de puntos en espacios multidimensionales.
