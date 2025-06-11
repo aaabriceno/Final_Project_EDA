@@ -8,7 +8,7 @@
 #include <unordered_map>
 using namespace std;
 
-const int MAX_NIVEL = 5; //Maximo nivel de nodos
+//const int MAX_NIVEL = 5; //Maximo nivel de nodos
 const int MAX_PUNTOS_POR_NODO = 50; //Maximo de puntos por nodo
 
 //Estructura Punto
@@ -18,16 +18,6 @@ struct Punto{
     vector <double> atributos; //12 attributos a 6-8 aproximadamente
     int id_cluster_geografico, id_subcluster_atributivo;
 };
-
-
-//Estructura Coordenada
-/*struct Coordenada{
-    double latitud;
-    double longitud;
-    Coordenada(double lat, double lon) : latitud(lat), longitud(lon) {}
-};
-*/
-
 
 //Estructura MBR
 struct MBR{
@@ -42,6 +32,7 @@ struct MBR{
         m_maxp[1] = max_longitud; // longitud maxima
     }
 };
+
 //Estructura MicroCluster
 struct MicroCluster{
     vector <double> centroId;
@@ -66,12 +57,6 @@ struct Nodo{
     bool esNodoHoja() { return (m_level == 0); }
 };
 
-struct Rama{
-    MBR mbr_rama; // MBR de la rama
-    Nodo* nodo_hijo; // Puntero al nodo hijo
-    
-};
-
 
 bool interseccion_mbr(const MicroCluster& mbr1, const MBR& rect) {
     double lat = mbr1.centroId[0];
@@ -81,9 +66,7 @@ bool interseccion_mbr(const MicroCluster& mbr1, const MBR& rect) {
              lat < rect.m_minp[0]  || lat > rect.m_maxp[0]);
 }
 
-
-class GeoCluster {
-    
+class GeoCluster {  
 public:
     GeoCluster();
     ~GeoCluster();
@@ -93,74 +76,115 @@ public:
 
 private:
     Nodo* raiz;
-    Nodo* buscarMejorNodoHoja(const Punto& punto);
-    void insertarEnElNodoHoja(Nodo* nodo_hoja, const Punto& punto);
-    void dividirNodo(Nodo* nodo, Nodo*& nuevo_nodo);
-    void insertarEnElPadre(Nodo* nodo_hoja, Nodo* nuevo_nodo);
-    void actualizarMBR(Nodo* nodo);
+    //funcion chooseSubTree y sus funciones internas
+    Nodo* chooseSubTree(const Punto& punto);
+    double calcularOverlapCosto(const MBR& mbr, const Punto& punto);
+    double calcularAreaCosto(const MBR& mbr, const Punto& punto);
+    double calcularMBRArea(const MBR& mbr);
+
+    //funcion Split y sus funciones internas
+    void Split(Nodo* nodo, Nodo*& nuevo_nodo);
+    int chooseSplitAxis(const vector<Punto>& puntos);
+    int chooseSplitIndex(const vector<Punto>& puntos, int eje);
+
+    //
+    Nodo* findBestLeafNode(const Punto& punto);
+    void insertIntoLeafNode(Nodo* nodo_hoja, const Punto& punto);
+    
+    void insertIntoParent(Nodo* nodo_hoja, Nodo* nuevo_nodo);
+    void updateMBR(Nodo* nodo);
     bool interseccionMBR(const MBR& mbr1, const MBR& mbr2);
     void searchRec(const MBR& rango, Nodo* nodo, vector<Punto>& puntos_similares);
 };
 
+int GeoCluster::chooseSplitAxis(const vector<Punto>& puntos){
+    double margeLat = 0.0, margenLong = 0.0;
 
-void GeoCluster::insertarPunto(const Punto& punto) {
-    // Paso 1: Encontrar el nodo adecuado para insertar el punto
-    Nodo* nodo_hoja = buscarMejorNodoHoja(punto);
+    //Paso 1: Ordenar por latitud(eje 0) y longitud(eje 1)
+    vector<Punto> puntosLatitud = puntos;
+    vector<Punto> puntoslongitud = puntos;
 
-    // Paso 2: Insertar el punto en el nodo hoja
-    insertarEnElNodoHoja(nodo_hoja, punto);
+        //ordenar los puntos 
 
-    // Paso 3: Si el nodo hoja está lleno, dividirlo
-    if (nodo_hoja->puntos.size() > MAX_PUNTOS_POR_NODO) {
-        Nodo* nuevo_nodo = nullptr;
-        dividirNodo(nodo_hoja, nuevo_nodo);
+}
 
-        // Paso 4: Propagar la división hacia los nodos internos si es necesario
-        if (nodo_hoja->esNodoRama()) {
-            insertarEnElPadre(nodo_hoja, nuevo_nodo);
+int GeoCluster::chooseSplitIndex(const vector<Punto>& puntos, int eje){
+
+}
+
+void Split(Nodo* nodo, Nodo* nuevo_nodo){
+
+}
+
+double GeoCluster::calcularOverlapCosto(const MBR& mbr, const Punto& punto){
+    double latMin = min(mbr.m_minp[0], punto.latitud);
+    double longMin = min(mbr.m_minp[1], punto.longitud);
+    double latMax = max(mbr.m_maxp[0], punto.latitud);
+    double longMax = max(mbr.m_maxp[1], punto.longitud);
+
+    //calculamos el area del nuevo mbr
+    double nuevaArea = (latMax-latMin) * (longMax-longMin);
+    double areaOriginal = (mbr.m_maxp[0]- mbr.m_minp[0]) * (mbr.m_maxp[1]- mbr.m_minp[1]);
+    return nuevaArea - areaOriginal;
+}
+
+double GeoCluster::calcularAreaCosto(const MBR& mbr, const Punto& punto){
+    double latMin = min(mbr.m_minp[0], punto.latitud);
+    double longMin = min(mbr.m_minp[1], punto.longitud);
+    double latMax = max(mbr.m_maxp[0], punto.latitud);
+    double longMax = max(mbr.m_maxp[1], punto.longitud);
+
+    //calculamos el area del nuevo mbr
+    return (latMax - latMin) * (longMax - longMin);
+}
+
+double GeoCluster::calcularMBRArea(const MBR& mbr) {
+    return (mbr.m_maxp[0] - mbr.m_minp[0]) * (mbr.m_maxp[1] - mbr.m_minp[1]);
+}
+
+//funcion para elegir el subarbol adecuado para insertar un punto
+Nodo* GeoCluster::chooseSubTree(const Punto& punto_ingresado){
+    Nodo* N = raiz;
+    if (N->esNodoHoja()) {
+        return N; // Si es hoja, retornar el nodo
+    }
+    
+    if(all_of(N->hijo.begin(),N->hijo.end(),[](Nodo* hijo){return hijo->esNodoHoja();})){
+        Nodo* mejor_nodo = nullptr;
+        double minOverLap = numeric_limits<double>::infinity();
+
+        for (auto& hijo: N->hijo){
+            double overLapCosto = calcularOverlapCosto(hijo->mbr, punto_ingresado);
+            if (overLapCosto < minOverLap){
+                minOverLap = overLapCosto;
+                mejor_nodo = hijo;
+            }
+
+            else if(overLapCosto == minOverLap){
+                double areaCosto = calcularAreaCosto(hijo->mbr, punto_ingresado);
+                if( areaCosto < calcularAreaCosto(mejor_nodo->mbr, punto_ingresado)){
+                    mejor_nodo = hijo;
+                }
+            }
         }
+        return mejor_nodo;
     }
-}
-
-
-void GeoCluster::dividirNodo(Nodo* nodo, Nodo*& nuevo_nodo){
-    // Paso 1: Calcular la mejor partición de los puntos del nodo
-    PartitionVars parVars;
-    findBestSplit(nodo, parVars);
-
-    // Paso 2: Crear el nuevo nodo
-    nuevo_nodo = new Nodo();
-
-    // Paso 3: Redistribuir los puntos entre los dos nodos
-    for (int i = 0; i < parVars.m_count[1]; i++) {
-        nodo->puntos.push_back(parVars.m_branchBuf[i].m_child);  // Agregar puntos al nuevo nodo
+    
+    else{
+        Nodo* mejor_nodo = nullptr;
+        double  minArea = numeric_limits<double>::infinity();
+        for (auto & hijo :N->hijo){
+            double areaCosto = calcularAreaCosto(hijo->mbr,punto_ingresado);
+            if(areaCosto < minArea){
+                minArea = areaCosto;
+                mejor_nodo = hijo;
+            }
+            else if(areaCosto == minArea){
+                if(calcularMBRArea(hijo->mbr) < calcularMBRArea(mejor_nodo->mbr)){
+                    mejor_nodo = hijo;
+                }
+            }
+        }
+        return chooseSubTree(punto_ingresado);
     }
-
-    // Paso 4: Actualizar el MBR de los nodos
-    updateMBR(nodo);
-    updateMBR(nuevo_nodo);
-}
-
-
-vector<Punto> GeoCluster::n_puntos_similiares_a_punto(const Punto& punto_de_busqueda, MBR& rango, int numero_de_puntos_similares) {
-    vector<Punto> puntos_similares;
-
-    // Paso 1: Buscar los nodos que intersectan con el MBR de la consulta
-    searchRec(rango, raiz, puntos_similares);
-
-    // Paso 2: Calcular la similitud de los puntos encontrados en los microclusters
-    for (auto& punto : puntos_similares) {
-        punto.similarity = computeSimilarity(punto_de_busqueda, punto); // Calcular similitud
-    }
-
-    // Paso 3: Ordenar los puntos por similitud (más cercano primero)
-    sort(puntos_similares.begin(), puntos_similares.end(), 
-         [](const Punto& a, const Punto& b) { return a.similarity < b.similarity; });
-
-    // Paso 4: Limitar la cantidad de puntos si es necesario
-    if (numero_de_puntos_similares > 0 && puntos_similares.size() > numero_de_puntos_similares) {
-        puntos_similares.resize(numero_de_puntos_similares);
-    }
-
-    return puntos_similares;
 }
