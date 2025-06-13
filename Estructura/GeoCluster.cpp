@@ -1,4 +1,4 @@
-#include <iostream>
+#include "GeoCluster.h"
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -6,32 +6,11 @@
 #include <cmath>
 #include <array>
 #include <unordered_map>
+#include<iostream>
 using namespace std;
 
-//const int MAX_NIVEL = 5; //Maximo nivel de nodos
-const int MAX_PUNTOS_POR_NODO = 30; //Maximo de puntos por nodo
-const int MIN_PUNTOS_POR_NODO = 10;
-//Estructura Punto
-struct Punto{
-    int id;
-    double latitud, longitud;
-    vector <double> atributos; //12 attributos a 6-8 aproximadamente
-    int id_cluster_geografico, id_subcluster_atributivo;
-};
 
-//Estructura MBR
-struct MBR{
-    double m_minp[2]; // [latitud minima, longitud minima]
-    double m_maxp[2]; // [latitud maxima, longitud maxima]
 
-    MBR(){}
-    MBR(double min_latitud, double min_longitud, double max_latitud, double max_longitud) {
-        m_minp[0] = min_latitud; // latitud minima
-        m_minp[1] = min_longitud; // longitud minima
-        m_maxp[0] = max_latitud; // latitud maxima
-        m_maxp[1] = max_longitud; // longitud maxima
-    }
-};
 
 //Estructura MicroCluster
 struct MicroCluster{
@@ -57,6 +36,18 @@ struct Nodo{
     bool esNodoHoja() { return (m_level == 0); }
 };
 
+int computeArea(int ax1, int ay1, int ax2, int ay2,int bx1, int by1, int bx2, int by2) {
+    int area1 = (ax2 - ax1) * (ay2 - ay1);
+    int area2 = (bx2 - bx1) * (by2 - by1);
+    
+    int interseccion_A = max(0, min(ax2, bx2) - max(ax1, bx1));
+    int interseccion_B = max(0, min(ay2, by2) - max(ay1, by1));
+    
+    int intersectadaArea = interseccion_A * interseccion_B;
+    return area1 + area2 - intersectadaArea;
+}
+
+
 bool interseccion_mbr_microcluster(const MicroCluster& mbr1, const MBR& rect) {
     double lat = mbr1.centroId[0];
     double lon = mbr1.centroId[1];
@@ -69,11 +60,12 @@ class GeoCluster {
 public:
     GeoCluster();
     ~GeoCluster();
+    Nodo* getRaiz(){ return raiz;}
     
     void insertarPunto(const Punto& punto);
     vector<Punto> n_puntos_similiares_a_punto(const Punto& punto_de_busqueda, MBR& rango,int numero_de_puntos_similares);
     vector<vector<Punto>> grupos_similares_de_puntos(MBR& rango);
-    vector<Punto> buscarPuntosDentroMBR(const MBR& rango);
+    vector<Punto> buscarPuntosDentroInterseccion(const MBR& rango, Nodo* nodo);
     MBR calcularMBR(const vector<Punto>& puntos);
 private:
     Nodo* raiz;
@@ -104,6 +96,7 @@ private:
     void searchRec(const MBR& rango, Nodo* nodo, vector<Punto>& puntos_similares);
 };
 
+//Constructor
 GeoCluster::GeoCluster() {
     // Inicialización de los atributos de la clase, si es necesario
     raiz = nullptr;  // Suponiendo que `raiz` es un puntero
@@ -395,10 +388,39 @@ void GeoCluster::insertarPunto(const Punto& punto) {
     updateMBR(nodo_hoja);  // Actualizar el MBR hacia arriba si es necesario
 }
 
-vector<Punto> GeoCluster::buscarPuntosDentroMBR(const MBR& rango) {
+
+bool GeoCluster::interseccionMBR(const MBR& mbr1, const MBR& mbr2) {
+    // Calculamos el área de la intersección entre los dos MBRs
+    int areaTotal = computeArea(mbr1.m_minp[0], mbr1.m_minp[1], mbr1.m_maxp[0], mbr1.m_maxp[1], 
+                                mbr2.m_minp[0], mbr2.m_minp[1], mbr2.m_maxp[0], mbr2.m_maxp[1]);
+    
+    // Si el área total es mayor que 0, entonces hay intersección
+    return areaTotal > 0;
+}
+
+vector<Punto> GeoCluster::buscarPuntosDentroInterseccion(const MBR& rango, Nodo* nodo) {
     vector<Punto> puntosEncontrados;
-    // Llamar a la función recursiva para buscar en todo el árbol
-    searchRec(rango, raiz, puntosEncontrados);
+
+    // Verificar si hay intersección entre el MBR de búsqueda y el MBR del nodo
+    if (interseccionMBR(rango, nodo->mbr)) {
+        // Si es una hoja, agregar los puntos del nodo si caen dentro del MBR de búsqueda
+        if (nodo->esNodoHoja()) {
+            for (const auto& punto : nodo->puntos) {
+                // Verificar si el punto está dentro del MBR de búsqueda
+                if (punto.latitud >= rango.m_minp[0] && punto.latitud <= rango.m_maxp[0] &&
+                    punto.longitud >= rango.m_minp[1] && punto.longitud <= rango.m_maxp[1]) {
+                    puntosEncontrados.push_back(punto);  // Agregar punto si está dentro
+                }
+            }
+        } else {
+            // Si no es una hoja, buscar recursivamente en los hijos del nodo
+            for (Nodo* hijo : nodo->hijo) {
+                vector<Punto> puntosHijo = buscarPuntosDentroInterseccion(rango, hijo);
+                puntosEncontrados.insert(puntosEncontrados.end(), puntosHijo.begin(), puntosHijo.end());
+            }
+        }
+    }
+
     return puntosEncontrados;
 }
 
@@ -418,16 +440,7 @@ void GeoCluster::searchRec(const MBR& rango, Nodo* nodo, vector<Punto>& puntos_s
     }
 }
 
-bool GeoCluster::interseccionMBR(const MBR& mbr1, const MBR& mbr2) {
-    // Verificar si hay superposición en el eje de latitud
-    bool overlapLat = !(mbr1.m_maxp[0] <= mbr2.m_minp[0] || mbr1.m_minp[0] >= mbr2.m_maxp[0]);
-    
-    // Verificar si hay superposición en el eje de longitud
-    bool overlapLon = !(mbr1.m_maxp[1] <= mbr2.m_minp[1] || mbr1.m_minp[1] >= mbr2.m_maxp[1]);
 
-    // Los MBRs se solapan si ambos ejes se solapan
-    return overlapLat && overlapLon;
-}
 
 
 int main() {
@@ -475,7 +488,7 @@ int main() {
     {37, 20.7, -69.0, {2.7, 3.7, 4.7}},
     {38, 19.8, -70.7, {1.5, 2.5, 3.5}},
     {39, 21.2, -70.5, {2.8, 3.8, 4.8}},
-    {40, 23.7, -67.3, {5.3, 6.3, 7.3}}
+    {40, 23.7, -1.3, {5.3, 6.3, 7.3}}
     };
 
 
@@ -484,13 +497,26 @@ int main() {
         geoCluster.insertarPunto(punto);
     }
 
-    // Calcular y mostrar el MBR de todos los puntos
-    MBR mbr = geoCluster.calcularMBR(puntos);
+    MBR rango(19.5,-70.5,20.5,-70);
+    Nodo* raiz = geoCluster.getRaiz();
 
+    vector<Punto> puntosEncontradosEnRango = geoCluster.buscarPuntosDentroInterseccion(rango,raiz);
+    
+    cout << "\nPuntos encontrados dentro de la intersección del MBR de búsqueda:" << endl;
+    for (const auto& punto : puntosEncontradosEnRango) {
+        cout << "ID: " << punto.id << ", Latitud: " << punto.latitud << ", Longitud: " << punto.longitud << endl;
+    }
+    
+    
+    // Calcular y mostrar el MBR de todos los puntos
+    //MBR mbr = geoCluster.calcularMBR(puntos);
+    /*
     // Imprimir el MBR
     cout << "\nMBR de los  puntos:" << endl;
     cout << "Latitud mínima: " << mbr.m_minp[0] << ", Longitud mínima: " << mbr.m_minp[1] << endl;
     cout << "Latitud máxima: " << mbr.m_maxp[0] << ", Longitud máxima: " << mbr.m_maxp[1] << endl;
+    */
+    
 
     return 0;
 }
