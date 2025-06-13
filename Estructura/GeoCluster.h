@@ -38,5 +38,72 @@ struct MBR{
     }
 };
 
+//Estructura MicroCluster
+struct MicroCluster{
+    vector <double> centroId;
+    double radio;  //Maxima distancia al centroide
+    int cantidad;
+    int id_subclaster_atributivo; //id del subcluster al que pertenece
+    vector<Punto> puntos; //Puntos que pertenecen a este microcluster
+    
+    MicroCluster(vector<double> centro, double r, int id_subclaster)
+        : centroId(centro), radio(r), cantidad(0), id_subclaster_atributivo(id_subclaster) {}   
+};
+
+//Estructura Nodo GeoCluster
+struct Nodo{
+    int m_level; //nivel del nodo
+    MBR mbr; 
+    vector<MicroCluster> micro_clusters;    //CANTIDAD DE MICROCLUSTERS: x
+    vector<Nodo*> hijo;  //vector de punteros de estructuras Nodo
+    vector<Punto> puntos;    //hojas 50 por nodo quizas?
+
+    bool esNodoRama() {return (m_level> 0);}
+    bool esNodoHoja() { return (m_level == 0); }
+};
+
+//Clase GeoCluster - Tree
+class GeoCluster {  
+public:
+    GeoCluster(); //Constructor
+    ~GeoCluster(); //Destructor
+    Nodo* getRaiz(){ return raiz;} //retorna el nodo raiz (private)
+    
+    void insertarPunto(const Punto& punto);
+    vector<Punto> n_puntos_similiares_a_punto(const Punto& punto_de_busqueda, MBR& rango,int numero_de_puntos_similares);
+    vector<vector<Punto>> grupos_similares_de_puntos(MBR& rango);
+    vector<Punto> buscarPuntosDentroInterseccion(const MBR& rango, Nodo* nodo);
+    MBR calcularMBR(const vector<Punto>& puntos);
+private:
+    Nodo* raiz;
+
+    //funcion chooseSubTree y sus funciones internas
+    double calcularOverlapCosto(const MBR& mbr, const Punto& punto);
+    double calcularAreaCosto(const MBR& mbr, const Punto& punto);
+    double calcularMBRArea(const MBR& mbr);
+    Nodo* chooseSubTree(const Punto& punto);
+    
+    
+    //funcion Split y sus funciones internas
+    int chooseSplitAxis(const vector<Punto>& puntos);
+    int chooseSplitIndex(vector<Punto>& puntos, int eje);
+    double calcularOverlap(const MBR& mbr1, const MBR& mbr2);
+    double calcularMargen(const MBR& mbr);
+    
+    
+    void Split(Nodo* nodo, Nodo*& nuevo_nodo);
+    
+
+    //Funciones Extras
+    Nodo* findBestLeafNode(const Punto& punto);
+    void insertIntoLeafNode(Nodo* nodo_hoja, const Punto& punto);
+    void insertIntoParent(Nodo* nodo_hoja, Nodo* nuevo_nodo);
+    void updateMBR(Nodo* nodo);
+    bool interseccionMBR(const MBR& mbr1, const MBR& mbr2);
+    void searchRec(const MBR& rango, Nodo* nodo, vector<Punto>& puntos_similares);
+    MBR computeMBR(double ax1, double ay1, double ax2, double ay2,
+                   double bx1, double by1, double bx2, double by2);
+    bool estaDentroDelMBR(const Punto& punto, const MBR& mbr);
+};
 
 #endif
