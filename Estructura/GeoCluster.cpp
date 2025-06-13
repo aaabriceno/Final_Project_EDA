@@ -9,8 +9,8 @@
 using namespace std;
 
 //const int MAX_NIVEL = 5; //Maximo nivel de nodos
-const int MAX_PUNTOS_POR_NODO = 50; //Maximo de puntos por nodo
-const int MIN_PUNTOS_POR_NODO = 20;
+const int MAX_PUNTOS_POR_NODO = 30; //Maximo de puntos por nodo
+const int MIN_PUNTOS_POR_NODO = 10;
 //Estructura Punto
 struct Punto{
     int id;
@@ -211,6 +211,10 @@ double GeoCluster::calcularMargen(const MBR& mbr) {
 }
 
 MBR GeoCluster::calcularMBR(const vector<Punto>& puntos) {
+    if (puntos.empty()) {
+        // Retornar un MBR inválido o vacío si no hay puntos
+        return MBR(0, 0, 0, 0);
+    }
     double minLat = puntos[0].latitud, maxLat = puntos[0].latitud;
     double minLon = puntos[0].longitud, maxLon = puntos[0].longitud;
 
@@ -432,14 +436,48 @@ int main() {
 
     // Crear algunos puntos de ejemplo
     vector<Punto> puntos = {
-        {1, 19.5, -70.5, {1.0, 2.0, 3.0}},
-        {2, 20.0, -70.2, {1.5, 2.5, 3.5}},
-        {3, 21.0, -71.0, {2.0, 3.0, 4.0}},
-        {4, 22.0, -69.5, {3.0, 4.0, 5.0}},
-        {5, 23.0, -68.0, {4.0, 5.0, 6.0}},
-        {6, 20.5, -70.0, {1.2, 2.2, 3.2}},
-        {7, 21.5, -69.5, {2.5, 3.5, 4.5}},
+    {1, 19.5, -70.5, {1.0, 2.0, 3.0}},
+    {2, 20.0, -70.2, {1.5, 2.5, 3.5}},
+    {3, 21.0, -71.0, {2.0, 3.0, 4.0}},
+    {4, 22.0, -69.5, {3.0, 4.0, 5.0}},
+    {5, 23.0, -68.0, {4.0, 5.0, 6.0}},
+    {6, 20.5, -70.0, {1.2, 2.2, 3.2}},
+    {7, 21.5, -69.5, {2.5, 3.5, 4.5}},
+    {8, 20.2, -69.8, {2.3, 3.3, 4.3}},
+    {9, 19.8, -70.4, {1.6, 2.6, 3.6}},
+    {10, 21.2, -70.1, {2.1, 3.1, 4.1}},
+    {11, 22.1, -69.6, {3.2, 4.2, 5.2}},
+    {12, 22.8, -68.3, {4.1, 5.1, 6.1}},
+    {13, 20.6, -69.9, {1.7, 2.7, 3.7}},
+    {14, 21.7, -70.8, {2.4, 3.4, 4.4}},
+    {15, 23.3, -67.9, {3.3, 4.3, 5.3}},
+    {16, 20.1, -70.3, {1.8, 2.8, 3.8}},
+    {17, 19.9, -69.4, {1.9, 2.9, 3.9}},
+    {18, 20.8, -71.1, {2.6, 3.6, 4.6}},
+    {19, 21.4, -69.7, {3.4, 4.4, 5.4}},
+    {20, 22.5, -68.7, {4.2, 5.2, 6.2}},
+    {21, 22.2, -70.0, {4.5, 5.5, 6.5}},
+    {22, 21.0, -69.4, {2.7, 3.7, 4.7}},
+    {23, 23.1, -67.8, {5.1, 6.1, 7.1}},
+    {24, 19.7, -70.2, {1.0, 1.5, 2.0}},
+    {25, 20.4, -70.6, {2.2, 3.2, 4.2}},
+    {26, 21.9, -71.2, {2.8, 3.8, 4.8}},
+    {27, 22.3, -69.1, {3.7, 4.7, 5.7}},
+    {28, 20.9, -69.3, {1.3, 2.3, 3.3}},
+    {29, 22.6, -68.4, {4.3, 5.3, 6.3}},
+    {30, 23.5, -67.5, {5.2, 6.2, 7.2}},
+    {31, 21.8, -70.3, {2.9, 3.9, 4.9}},
+    {32, 20.3, -69.7, {2.0, 3.0, 4.0}},
+    {33, 19.6, -70.9, {1.4, 2.4, 3.4}},
+    {34, 21.3, -70.0, {2.5, 3.5, 4.5}},
+    {35, 22.4, -68.6, {3.6, 4.6, 5.6}},
+    {36, 23.6, -67.4, {4.4, 5.4, 6.4}},
+    {37, 20.7, -69.0, {2.7, 3.7, 4.7}},
+    {38, 19.8, -70.7, {1.5, 2.5, 3.5}},
+    {39, 21.2, -70.5, {2.8, 3.8, 4.8}},
+    {40, 23.7, -67.3, {5.3, 6.3, 7.3}}
     };
+
 
     // Insertamos los puntos en el árbol
     for (const auto& punto : puntos) {
@@ -450,7 +488,7 @@ int main() {
     MBR mbr = geoCluster.calcularMBR(puntos);
 
     // Imprimir el MBR
-    cout << "\nMBR de los 7 puntos:" << endl;
+    cout << "\nMBR de los  puntos:" << endl;
     cout << "Latitud mínima: " << mbr.m_minp[0] << ", Longitud mínima: " << mbr.m_minp[1] << endl;
     cout << "Latitud máxima: " << mbr.m_maxp[0] << ", Longitud máxima: " << mbr.m_maxp[1] << endl;
 
