@@ -13,8 +13,8 @@
 using namespace std;
 
 //const int MAX_NIVEL = 5; //Maximo nivel de nodos
-const int MAX_PUNTOS_POR_NODO = 30; //Maximo de puntos por nodo
-const int MIN_PUNTOS_POR_NODO = 10;
+const int MAX_PUNTOS_POR_NODO = 10; //Maximo de puntos por nodo
+const int MIN_PUNTOS_POR_NODO = 2;
 
 //Estructura Punto
 struct Punto{
@@ -89,8 +89,6 @@ private:
     int chooseSplitIndex(vector<Punto>& puntos, int eje);
     double calcularOverlap(const MBR& mbr1, const MBR& mbr2);
     double calcularMargen(const MBR& mbr);
-    
-    
     void Split(Nodo* nodo, Nodo*& nuevo_nodo);
     
 
