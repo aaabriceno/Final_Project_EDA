@@ -20,9 +20,7 @@ int computeArea(int ax1, int ay1, int ax2, int ay2,int bx1, int by1, int bx2, in
     return area1 + area2 - intersectadaArea;
 }
 
-/*
-Funcion que determina si un rango de busqueda intersecciona con un microcluster
-*/
+//Funcion que determina si un rango de busqueda intersecciona con un microcluster
 bool interseccion_mbr_microcluster(const MicroCluster& mbr1, const MBR& rect) {
     double lat = mbr1.centroId[0];
     double lon = mbr1.centroId[1];
@@ -30,7 +28,6 @@ bool interseccion_mbr_microcluster(const MicroCluster& mbr1, const MBR& rect) {
     return !(lon < rect.m_minp[1] || lon > rect.m_maxp[1] ||
              lat < rect.m_minp[0]  || lat > rect.m_maxp[0]);
 }
-
 
 
 //Constructor
@@ -211,8 +208,25 @@ int GeoCluster::chooseSplitIndex(vector<Punto>& puntos, int eje) {
 
     // Paso 2: Evaluar todas las distribuciones posibles
     for (int i = 0; i < numero_de_distribuciones; ++i) {  // Para cada posible división (entre m y M-m)
-        vector<Punto> grupo1(puntos.begin(), puntos.begin() + i);  // Grupo 1 con i puntos
-        vector<Punto> grupo2(puntos.begin() + i, puntos.end());   // Grupo 2 con el resto de los puntos
+        // Calcular los puntos que van en cada grupo
+        int grupo1_size = m + i;  // Grupo 1 recibe m + i puntos
+        int grupo2_size = M - grupo1_size;  // Grupo 2 recibe el resto de los puntos
+
+        // Crear los grupos basados en el índice de división
+        vector<Punto> grupo1(puntos.begin(), puntos.begin() + grupo1_size);
+        vector<Punto> grupo2(puntos.begin() + grupo1_size, puntos.end());
+        
+        
+        // Aquí agregamos la impresión de los grupos para depurar:
+        cout << "Grupo 1 (tamaño " << grupo1.size() << "):" << endl;
+        for (const auto& punto : grupo1) {
+            cout << "  ID: " << punto.id << ", Latitud: " << punto.latitud << ", Longitud: " << punto.longitud << endl;
+        }
+
+        cout << "Grupo 2 (tamaño " << grupo2.size() << "):" << endl;
+        for (const auto& punto : grupo2) {
+            cout << "  ID: " << punto.id << ", Latitud: " << punto.latitud << ", Longitud: " << punto.longitud << endl;
+        }
 
         // Calcular los MBRs para ambos grupos
         MBR mbrGrupo1 = calcularMBR(grupo1);
@@ -258,6 +272,18 @@ void GeoCluster::Split(Nodo* nodo, Nodo*& nuevo_nodo) {
     vector<Punto> grupo1(nodo->puntos.begin(), nodo->puntos.begin() + splitIndex);
     vector<Punto> grupo2(nodo->puntos.begin() + splitIndex, nodo->puntos.end());
     
+    // Aquí agregamos la impresión de los grupos para depurar:
+    cout << "Grupo 1 (tamaño " << grupo1.size() << "):" << endl;
+    for (const auto& punto : grupo1) {
+        cout << "  ID: " << punto.id << ", Latitud: " << punto.latitud << ", Longitud: " << punto.longitud << endl;
+    }
+
+    cout << "Grupo 2 (tamaño " << grupo2.size() << "):" << endl;
+    for (const auto& punto : grupo2) {
+        cout << "  ID: " << punto.id << ", Latitud: " << punto.latitud << ", Longitud: " << punto.longitud << endl;
+    }
+
+
     // Paso 3: Crear los MBRs para los dos grupos
     MBR mbrGrupo1 = calcularMBR(grupo1);
     MBR mbrGrupo2 = calcularMBR(grupo2);
@@ -271,6 +297,11 @@ void GeoCluster::Split(Nodo* nodo, Nodo*& nuevo_nodo) {
     nodo->mbr = mbrGrupo1;
     nodo->puntos = grupo1;
 }
+
+
+
+
+
 
 void GeoCluster::insertIntoLeafNode(Nodo* nodo_hoja, const Punto& punto) {
     // Insertamos el punto en el nodo hoja (aquí se puede hacer en orden)
@@ -325,8 +356,7 @@ void GeoCluster::insertarPunto(const Punto& punto) {
     updateMBR(nodo_hoja);  // Actualizar el MBR hacia arriba si es necesario
 }
 
-MBR GeoCluster::computeMBR(double ax1, double ay1, double ax2, double ay2,
-                           double bx1, double by1, double bx2, double by2){
+MBR GeoCluster::computeMBR(double ax1, double ay1, double ax2, double ay2,double bx1, double by1, double bx2, double by2){
     // Calcular las coordenadas del MBR de intersección
     double interseccion_minLat = max(ax1, bx1);  // Latitud mínima de la intersección
     double interseccion_minLon = max(ay1, by1);  // Longitud mínima de la intersección
