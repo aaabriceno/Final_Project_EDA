@@ -298,11 +298,6 @@ void GeoCluster::Split(Nodo* nodo, Nodo*& nuevo_nodo) {
     nodo->puntos = grupo1;
 }
 
-
-
-
-
-
 void GeoCluster::insertIntoLeafNode(Nodo* nodo_hoja, const Punto& punto) {
     // Insertamos el punto en el nodo hoja (aquí se puede hacer en orden)
     nodo_hoja->puntos.push_back(punto);

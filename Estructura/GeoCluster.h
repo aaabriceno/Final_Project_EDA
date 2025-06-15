@@ -14,7 +14,7 @@ using namespace std;
 
 //const int MAX_NIVEL = 5; //Maximo nivel de nodos
 const int MAX_PUNTOS_POR_NODO = 10; //Maximo de puntos por nodo
-const int MIN_PUNTOS_POR_NODO = 2;
+const int MIN_PUNTOS_POR_NODO = 4;  //Minimo de puntos por nodo
 
 //Estructura Punto
 struct Punto{
@@ -23,7 +23,6 @@ struct Punto{
     vector <double> atributos; //12 attributos a 6-8 aproximadamente
     int id_cluster_geografico, id_subcluster_atributivo;
 };
-
 //Estructura MBR
 struct MBR{
     double m_minp[2]; // [latitud minima, longitud minima]
@@ -69,9 +68,13 @@ public:
     ~GeoCluster(); //Destructor
     Nodo* getRaiz(){ return raiz;} //retorna el nodo raiz (private)
     
+    //Funcion que inserta los puntos
     void insertarPunto(const Punto& punto);
+    //Funcion consulta 1
     vector<Punto> n_puntos_similiares_a_punto(const Punto& punto_de_busqueda, MBR& rango,int numero_de_puntos_similares);
+    //Funcion consulta 2
     vector<vector<Punto>> grupos_similares_de_puntos(MBR& rango);
+    
     vector<Punto> buscarPuntosDentroInterseccion(const MBR& rango, Nodo* nodo);
     MBR calcularMBR(const vector<Punto>& puntos);
 private:
