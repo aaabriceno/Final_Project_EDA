@@ -1,6 +1,5 @@
 #ifndef GEOCLUSTER_H
 #define GEOCLUSTER_H
-
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -13,8 +12,8 @@
 using namespace std;
 
 //const int MAX_NIVEL = 5; //Maximo nivel de nodos
-const int MAX_PUNTOS_POR_NODO = 10; //Maximo de puntos por nodo
-const int MIN_PUNTOS_POR_NODO = 4;  //Minimo de puntos por nodo
+const int MAX_PUNTOS_POR_NODO = 30; //Maximo de puntos por nodo
+const int MIN_PUNTOS_POR_NODO = 2;  //Minimo de puntos por nodo
 
 //Estructura Punto
 struct Punto{
@@ -40,7 +39,7 @@ struct MBR{
 //Estructura MicroCluster
 struct MicroCluster{
     vector <double> centroId;
-    double radio;  //Maxima distancia al centroide
+    double radio;  
     int cantidad;
     int id_subclaster_atributivo; //id del subcluster al que pertenece
     vector<Punto> puntos; //Puntos que pertenecen a este microcluster
@@ -51,14 +50,16 @@ struct MicroCluster{
 
 //Estructura Nodo GeoCluster
 struct Nodo{
-    int m_level; //nivel del nodo
-    MBR mbr; 
-    vector<MicroCluster> micro_clusters;    //CANTIDAD DE MICROCLUSTERS: x
-    vector<Nodo*> hijo;  //vector de punteros de estructuras Nodo
-    vector<Punto> puntos;    //hojas 50 por nodo quizas?
+    bool esHoja;
+    MBR mbr;
+    vector<Nodo*> hijos;  
+    Nodo(bool esHoja = false):esHoja(esHoja){ }
+};
 
-    bool esNodoRama() {return (m_level> 0);}
-    bool esNodoHoja() { return (m_level == 0); }
+struct Hoja{
+    vector<Punto> puntos;
+    vector<MicroCluster> microCluster_hoja;
+    MBR mbr_hoja;
 };
 
 //Clase GeoCluster - Tree
