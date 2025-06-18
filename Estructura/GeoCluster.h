@@ -12,8 +12,10 @@
 using namespace std;
 
 //const int MAX_NIVEL = 5; //Maximo nivel de nodos
-const int MAX_PUNTOS_POR_NODO = 6; //Maximo de puntos por nodo
+const int MAX_PUNTOS_POR_NODO = 10; //Maximo de puntos por nodo
 const int MIN_PUNTOS_POR_NODO = 2;  //Minimo de puntos por nodo
+const double PORCENTAJE_PARA_HACER_REINSERT = 0.3; //para poder hacer reinsert
+
 
 //Estructura Punto
 struct Punto{
@@ -60,15 +62,15 @@ struct MBR{
 struct MicroCluster{
     vector <double> centroId;
     double radio;  
-    int cantidad;
+    //int cantidad;
     int id_subclaster_atributivo; //id del subcluster al que pertenece
     vector<Punto> puntos; //Puntos que pertenecen a este microcluster
     
     MicroCluster(vector<double> centro, double r, int id_subclaster)
-        : centroId(centro), radio(r), cantidad(0), id_subclaster_atributivo(id_subclaster) {}   
+        : centroId(centro), radio(r), id_subclaster_atributivo(id_subclaster) {}   
 };
 
-//Estructura Nodo GeoCluster
+//Estructura Nodo
 struct Nodo{
     bool esHoja;
     int m_nivel;
@@ -76,17 +78,18 @@ struct Nodo{
     vector<Nodo*> hijos;  
     vector<Punto> puntos; //Solo para las hojas
     vector<MicroCluster> microclusters_en_Hoja;
-    Nodo(bool esHoja = false) : esHoja(esHoja), m_nivel(0) {}
+    Nodo* padre; //Puntero al padre
+    Nodo(bool esHoja = false) : esHoja(esHoja), m_nivel(0), padre(nullptr) {}
 };
 
-//Clase GeoCluster - Tree
+//Clase GeoCluster-Tree
 class GeoCluster {  
 public:
     GeoCluster();
     ~GeoCluster();
     Nodo* getRaiz(){ return raiz;}
-    void InserData();
-    void insertar(const Punto& punto);
+    void InserData(const Punto& punto);
+    void insertar(const Punto& punto,int nivel);
     vector<Punto> n_puntos_similiares_a_punto(const Punto& punto_de_busqueda, MBR& rango, int numero_de_puntos_similares);
     vector<vector<Punto>> grupos_similares_de_puntos(MBR& rango);
     
@@ -94,13 +97,13 @@ public:
     MBR calcularMBR(const vector<Punto>& puntos);
 
 private:
-    Nodo* raiz;
-    vector<bool> niveles_de_arbol;
+    Nodo* raiz = nullptr;
+    unordered_map<int,bool> niveles_reinsert;
 
-    double calcularOverlapCosto(const MBR& mbr, const Punto& punto);
-    double calcularAreaCosto(const MBR& mbr, const Punto& punto);
+    double calcularCostoOverlap(const MBR& mbr, const Punto& punto);
+    double calcularCostoDeAmpliacionArea(const MBR& mbr, const Punto& punto);
     double calcularMBRArea(const MBR& mbr);
-    Nodo* chooseSubTree(Nodo* nodo, const Punto& punto);
+    Nodo* chooseSubTree(Nodo* N,const Punto punto, int nivel);
     
     int chooseSplitAxis(const vector<Punto>& puntos);
     int chooseSplitIndex(vector<Punto>& puntos, int eje);

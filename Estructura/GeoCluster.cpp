@@ -29,7 +29,9 @@ GeoCluster::~GeoCluster() {
     std::cout << "Destructor llamado" << std::endl;
 }
 
-double GeoCluster::calcularOverlapCosto(const MBR& mbr, const Punto& punto){
+
+//Funciones que ayudan a chooseSubTree
+double GeoCluster::calcularCostoOverlap(const MBR& mbr, const Punto& punto){
     double latMin = min(mbr.m_minp[0], punto.latitud);
     double longMin = min(mbr.m_minp[1], punto.longitud);
     double latMax = max(mbr.m_maxp[0], punto.latitud);
@@ -40,7 +42,7 @@ double GeoCluster::calcularOverlapCosto(const MBR& mbr, const Punto& punto){
     return nuevaArea - areaOriginal;
 }
 
-double GeoCluster::calcularAreaCosto(const MBR& mbr, const Punto& punto){
+double GeoCluster::calcularCostoDeAmpliacionArea(const MBR& mbr, const Punto& punto){
     double latMin = min(mbr.m_minp[0], punto.latitud);
     double longMin = min(mbr.m_minp[1], punto.longitud);
     double latMax = max(mbr.m_maxp[0], punto.latitud);
@@ -53,51 +55,53 @@ double GeoCluster::calcularMBRArea(const MBR& mbr) {
     return (mbr.m_maxp[0] - mbr.m_minp[0]) * (mbr.m_maxp[1] - mbr.m_minp[1]);
 }
 
-Nodo* GeoCluster::chooseSubTree(Nodo* nodo, const Punto& punto_ingresado){
-    Nodo* N = raiz; //nodo
-
-    if (nodo->esHoja) {
-        return nodo;
-    }
+//Funcion chooseSubTree
+Nodo* GeoCluster::chooseSubTree(Nodo* N,const Punto punto, int nivel){
+    Nodo* N = raiz; //iniciamos con la raiz
     Nodo* mejor_nodo = nullptr;
-
-    if(all_of(nodo->hijos.begin(), nodo->hijos.end(), [](Nodo* hijo){return hijo->esHoja;})){
-        Nodo* mejor_nodo = nullptr;
-        double minOverlap = numeric_limits<double>::infinity();
-        
-        for (auto& hijo: N->hijos){
-            double overLapCosto = calcularOverlapCosto(hijo->mbr, punto_ingresado);
-            if (overLapCosto < minOverlap){
-                minOverlap = overLapCosto;
-                mejor_nodo = hijo;
-            }
-            else if(overLapCosto == minOverlap){
-                double areaCosto = calcularAreaCosto(hijo->mbr, punto_ingresado);
-                if(areaCosto < calcularAreaCosto(mejor_nodo->mbr, punto_ingresado)){
+    //si N es hoja
+    if (N->esHoja) {
+        return N;
+    }
+    //si nodo no es hoja (nodo interno)
+    else {
+        // si los punteros hijos apuntan a hojas
+        if(all_of(N->hijos.begin(), N->hijos.end(), [](Nodo* hijo){return hijo->esHoja;})){
+            double minOverlap = numeric_limits<double>::infinity();
+            for (auto& hijo: N->hijos){
+                double costoOverlap = calcularCostoOverlap(hijo->mbr, punto);
+                if (costoOverlap < minOverlap){
+                    minOverlap = costoOverlap;
                     mejor_nodo = hijo;
                 }
-            }
-        }
-        return chooseSubTree(mejor_nodo, punto_ingresado);
-    }
-    else{
-        Nodo* mejor_nodo = nullptr;
-        double minArea = numeric_limits<double>::infinity();
-        
-        for (auto& hijo : nodo->hijos){
-            double areaCosto = calcularAreaCosto(hijo->mbr, punto_ingresado);
-            if(areaCosto < minArea){
-                minArea = areaCosto;
-                mejor_nodo = hijo;
-            }
-            else if(areaCosto == minArea){
-                if(calcularMBRArea(hijo->mbr) < calcularMBRArea(mejor_nodo->mbr)){
-                    mejor_nodo = hijo;
+                else if(costoOverlap == minOverlap){
+                    double CostoAreaAmpliacion = calcularCostoDeAmpliacionArea(hijo->mbr, punto);
+                    if(CostoAreaAmpliacion < calcularCostoDeAmpliacionArea(mejor_nodo->mbr, punto)){
+                        mejor_nodo = hijo;
+                    }
                 }
             }
+            return chooseSubTree(N,punto, nivel);
         }
-        return chooseSubTree(mejor_nodo, punto_ingresado);
-    }
+        //si los punteros hijos a puntan a nodos internos
+        else{
+            double minArea = numeric_limits<double>::infinity();
+            for (auto& hijo : N->hijos){
+                double CostoMinArea = calcularCostoDeAmpliacionArea(hijo->mbr, punto);
+                if(CostoMinArea < minArea){
+                    minArea = CostoMinArea;
+                    mejor_nodo = hijo;
+                }
+                else if(CostoMinArea == minArea){
+                    if(calcularMBRArea(hijo->mbr) < calcularMBRArea(mejor_nodo->mbr)){
+                        mejor_nodo = hijo;
+                    }
+                }
+            }  
+        }
+    }  
+    //CS3 : Seleccionar N como el nodo hijo y repetir desde CS2
+    return chooseSubTree(N,punto, nivel);
 }
 
 double GeoCluster::calcularOverlap(const MBR& mbr1, const MBR& mbr2) {
@@ -237,6 +241,43 @@ void GeoCluster::insertIntoLeafNode(Nodo* nodo_hoja, const Punto& punto) {
     nodo_hoja->mbr = calcularMBR(nodo_hoja->puntos);
 }
 
+void GeoCluster::insertar(const Punto& punto, int nivel) {
+    Nodo* N = raiz;
+    if (raiz == nullptr) {
+        raiz = new Nodo(true);
+        raiz->m_nivel = 0;
+    }
+
+    Nodo* nodo_hoja = chooseSubTree(raiz, punto, nivel);
+
+    if (nodo_hoja->esHoja) {
+        insertIntoLeafNode(nodo_hoja, punto);
+
+        if (nodo_hoja->puntos.size() > MAX_PUNTOS_POR_NODO) {
+            Nodo* nuevo_nodo = nullptr;
+            Split(nodo_hoja, nuevo_nodo);
+            
+            // Encontrar padre (implementación simplificada)
+            if (nodo_hoja == raiz) {
+                insertIntoParent(nullptr, nuevo_nodo);
+            } else {
+                // Aquí necesitarías encontrar el padre real
+                cout << "Warning: Búsqueda de padre no implementada completamente" << endl;
+            }
+        }
+
+        updateMBR(nodo_hoja);
+    }
+    else {
+        cout << "Error: Se intentó insertar un punto en un nodo interno." << endl;
+    }
+}
+
+void GeoCluster::InserData(const Punto& punto_a_insertar){
+    niveles_reinsert.clear();
+    insertar(punto_a_insertar,0);
+}
+
 void GeoCluster::insertIntoParent(Nodo* padre, Nodo* nuevo_nodo) {
     if (padre == nullptr) {
         // Crear nueva raíz
@@ -275,36 +316,7 @@ void GeoCluster::updateMBR(Nodo* nodo) {
     }
 }
 
-void GeoCluster::insertarPunto(const Punto& punto) {
-    if (raiz == nullptr) {
-        raiz = new Nodo(true);
-        raiz->m_nivel = 0;
-    }
 
-    Nodo* nodo_hoja = chooseSubTree(raiz, punto);
-
-    if (nodo_hoja->esHoja) {
-        insertIntoLeafNode(nodo_hoja, punto);
-
-        if (nodo_hoja->puntos.size() > MAX_PUNTOS_POR_NODO) {
-            Nodo* nuevo_nodo = nullptr;
-            Split(nodo_hoja, nuevo_nodo);
-            
-            // Encontrar padre (implementación simplificada)
-            if (nodo_hoja == raiz) {
-                insertIntoParent(nullptr, nuevo_nodo);
-            } else {
-                // Aquí necesitarías encontrar el padre real
-                cout << "Warning: Búsqueda de padre no implementada completamente" << endl;
-            }
-        }
-
-        updateMBR(nodo_hoja);
-    }
-    else {
-        cout << "Error: Se intentó insertar un punto en un nodo interno." << endl;
-    }
-}
 
 double GeoCluster::computeArea(double ax1, double ay1, double ax2, double ay2,
                               double bx1, double by1, double bx2, double by2) {
