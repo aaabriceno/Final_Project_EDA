@@ -54,15 +54,18 @@ double GeoCluster::calcularMBRArea(const MBR& mbr) {
 }
 
 Nodo* GeoCluster::chooseSubTree(Nodo* nodo, const Punto& punto_ingresado){
+    Nodo* N = raiz; //nodo
+
     if (nodo->esHoja) {
         return nodo;
     }
+    Nodo* mejor_nodo = nullptr;
 
     if(all_of(nodo->hijos.begin(), nodo->hijos.end(), [](Nodo* hijo){return hijo->esHoja;})){
         Nodo* mejor_nodo = nullptr;
         double minOverlap = numeric_limits<double>::infinity();
         
-        for (auto& hijo: nodo->hijos){
+        for (auto& hijo: N->hijos){
             double overLapCosto = calcularOverlapCosto(hijo->mbr, punto_ingresado);
             if (overLapCosto < minOverlap){
                 minOverlap = overLapCosto;

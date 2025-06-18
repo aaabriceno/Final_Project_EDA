@@ -29,14 +29,10 @@ int main() {
     {9, 19.8, -70.4, {1.6, 2.6, 3.6}},
     {10, 21.2, -70.1, {2.1, 3.1, 4.1}},
     };
-    
-    // Insertamos los puntos en el árbol
     for (const auto& punto : puntos) {
         geoCluster.insertarPunto(punto);
         cout << "Insertando punto: " << punto.latitud << " "<< punto.longitud << endl;
     }
-
-    //lat_min,long_min, lat_max,long_max
     MBR rango(19,-72,22,-69);
     Nodo* raiz = geoCluster.getRaiz();
 

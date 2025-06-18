@@ -12,7 +12,7 @@
 using namespace std;
 
 //const int MAX_NIVEL = 5; //Maximo nivel de nodos
-const int MAX_PUNTOS_POR_NODO = 30; //Maximo de puntos por nodo
+const int MAX_PUNTOS_POR_NODO = 6; //Maximo de puntos por nodo
 const int MIN_PUNTOS_POR_NODO = 2;  //Minimo de puntos por nodo
 
 //Estructura Punto
@@ -85,8 +85,8 @@ public:
     GeoCluster();
     ~GeoCluster();
     Nodo* getRaiz(){ return raiz;}
-    
-    void insertarPunto(const Punto& punto);
+    void InserData();
+    void insertar(const Punto& punto);
     vector<Punto> n_puntos_similiares_a_punto(const Punto& punto_de_busqueda, MBR& rango, int numero_de_puntos_similares);
     vector<vector<Punto>> grupos_similares_de_puntos(MBR& rango);
     
@@ -95,6 +95,7 @@ public:
 
 private:
     Nodo* raiz;
+    vector<bool> niveles_de_arbol;
 
     double calcularOverlapCosto(const MBR& mbr, const Punto& punto);
     double calcularAreaCosto(const MBR& mbr, const Punto& punto);
