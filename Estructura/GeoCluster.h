@@ -84,11 +84,15 @@ struct Nodo{
 //Clase GeoCluster-Tree
 class GeoCluster {  
 public:
-    GeoCluster();
-    ~GeoCluster();
+    GeoCluster(); //Constructor
+    ~GeoCluster(); //Destructor
     Nodo* getRaiz(){ return raiz;}
-    void InserData(const Punto& punto);
+    
+    //Funciones para insercion de datos
+    void inserData(const Punto& punto);
     void insertar(const Punto& punto,int nivel);
+
+    //FUNCIONES 1 Y 2
     vector<Punto> n_puntos_similiares_a_punto(const Punto& punto_de_busqueda, MBR& rango, int numero_de_puntos_similares);
     vector<vector<Punto>> grupos_similares_de_puntos(MBR& rango);
     
@@ -99,19 +103,27 @@ private:
     Nodo* raiz = nullptr;
     unordered_map<int,bool> niveles_reinsert;
 
-    double calcularCostoOverlap(const MBR& mbr, const Punto& punto);
-    double calcularCostoDeAmpliacionArea(const MBR& mbr, const Punto& punto);
-    double calcularMBRArea(const MBR& mbr);
     Nodo* chooseSubTree(Nodo* N,const Punto punto, int nivel);
-    
-    bool OverFlowTreatment(Nodo*N, const Punto& punto, int nivel);   
-    void reinsert(Nodo* N, const Punto& punto);
+        double calcularCostoOverlap(const MBR& mbr, const Punto& punto);
+        double calcularCostoDeAmpliacionArea(const MBR& mbr, const Punto& punto);
+        double calcularMBRArea(const MBR& mbr);
 
-    int chooseSplitAxis(const vector<Punto>& puntos);
-    int chooseSplitIndex(vector<Punto>& puntos, int eje);
-    double calcularOverlap(const MBR& mbr1, const MBR& mbr2);
-    double calcularMargen(const MBR& mbr);
-    void Split(Nodo* nodo, Nodo*& nuevo_nodo);
+    bool OverFlowTreatment(Nodo*N, const Punto& punto, int nivel);   
+        void reinsert(Nodo* N, const Punto& punto);
+            
+        void Split(Nodo* nodo, Nodo*& nuevo_nodo);
+            int chooseSplitAxis(const vector<Punto>& puntos);
+                double calcularMargen(const MBR& mbr);
+            int chooseSplitIndex(vector<Punto>& puntos, int eje);
+                double calcularOverlap(const MBR& mbr1, const MBR& mbr2);
+
+    
+    
+    
+    
+    
+    
+    
     
     Nodo* findBestLeafNode(const Punto& punto);
     void insertIntoLeafNode(Nodo* nodo_hoja, const Punto& punto);
