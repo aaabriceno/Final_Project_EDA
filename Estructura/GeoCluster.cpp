@@ -106,7 +106,10 @@ bool GeoCluster::OverFlowTreatment(Nodo* N, const Punto& punto, int nivel) {
 void GeoCluster::reinsert(Nodo* N, const Punto& punto) {
     vector<pair<double, Punto>> distancias;
     
-    // RI1: Calcular distancias al centro del nodo
+    /*
+    RI1: Calcular distancias al centro del nodo N, con los mbr
+         de cada MBR que tiene el nodo N
+    */ 
     Punto centro = calcularCentroNodo(N);
     for (const auto& p : N->puntos) {
         double dist = calcularDistancia(p, centro);
