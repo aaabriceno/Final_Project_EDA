@@ -118,13 +118,6 @@ private:
                 double calcularOverlap(const MBR& mbr1, const MBR& mbr2);
 
     
-    
-    
-    
-    
-    
-    
-    
     Nodo* findBestLeafNode(const Punto& punto);
     void insertIntoLeafNode(Nodo* nodo_hoja, const Punto& punto);
     void insertIntoParent(Nodo* padre, Nodo* nuevo_nodo);
