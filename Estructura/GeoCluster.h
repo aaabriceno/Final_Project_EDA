@@ -105,7 +105,8 @@ private:
     Nodo* chooseSubTree(Nodo* N,const Punto punto, int nivel);
     
     bool OverFlowTreatment(Nodo*N, const Punto& punto, int nivel);   
-    
+    void reinsert(Nodo* N, const Punto& punto);
+
     int chooseSplitAxis(const vector<Punto>& puntos);
     int chooseSplitIndex(vector<Punto>& puntos, int eje);
     double calcularOverlap(const MBR& mbr1, const MBR& mbr2);
