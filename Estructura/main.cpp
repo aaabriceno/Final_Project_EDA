@@ -30,7 +30,7 @@ int main() {
     {10, 21.2, -70.1, {2.1, 3.1, 4.1}},
     };
     for (const auto& punto : puntos) {
-        geoCluster.insertarPunto(punto);
+        geoCluster.InserData(punto);
         cout << "Insertando punto: " << punto.latitud << " "<< punto.longitud << endl;
     }
     MBR rango(19,-72,22,-69);
