@@ -12,50 +12,35 @@
 //probando
 using namespace std;
 
-bool interseccion_mbr_microcluster(const MicroCluster& mbr1, const MBR& rect) {
-    double lat = mbr1.centroId[0];
-    double lon = mbr1.centroId[1];
-
-    return !(lon < rect.m_minp[1] || lon > rect.m_maxp[1] ||
-             lat < rect.m_minp[0]  || lat > rect.m_maxp[0]);
+//Primera funcion que se usa para insertar un punto
+void GeoCluster::InserData(const Punto& punto_a_insertar){
+    niveles_reinsert.clear();
+    insertar(punto_a_insertar,0);
 }
 
-GeoCluster::GeoCluster() {
-    raiz = nullptr;
-    std::cout << "Constructor llamado" << std::endl;
+void GeoCluster::insertar(const Punto& punto, int nivel) {
+    //I1: Llamar a chooseSubTree para encontrar el mejor nodo hoja
+    Nodo* N = raiz;
+    if (raiz == nullptr) {
+        raiz = new Nodo(true); //es hoja
+        raiz->m_nivel = 0;
+    }
+
+    Nodo* nodo_hoja = chooseSubTree(raiz, punto, nivel);
+
+    //I2: Si N tiene menos entradas que M, insertar el punto en N
+    if (nodo_hoja->puntos.size() < MAX_PUNTOS_POR_NODO){
+        insertIntoLeafNode(N,punto);
+        updateMBR(N);
+    } 
+    //S1: Si N tiene M entradas, llamar a OverFlowTreatment
+    else{
+        Nodo* nuevo_nodo = nullptr;
+        bool splite = OverFlowTreatment(N,punto,nivel);
+        
+    }
 }
 
-GeoCluster::~GeoCluster() {
-    delete raiz;
-    std::cout << "Destructor llamado" << std::endl;
-}
-
-//Funciones que ayudan a chooseSubTree
-double GeoCluster::calcularCostoOverlap(const MBR& mbr, const Punto& punto){
-    double latMin = min(mbr.m_minp[0], punto.latitud);
-    double longMin = min(mbr.m_minp[1], punto.longitud);
-    double latMax = max(mbr.m_maxp[0], punto.latitud);
-    double longMax = max(mbr.m_maxp[1], punto.longitud);
-
-    double nuevaArea = (latMax-latMin) * (longMax-longMin);
-    double areaOriginal = (mbr.m_maxp[0]- mbr.m_minp[0]) * (mbr.m_maxp[1]- mbr.m_minp[1]);
-    return nuevaArea - areaOriginal;
-}
-
-double GeoCluster::calcularCostoDeAmpliacionArea(const MBR& mbr, const Punto& punto){
-    double latMin = min(mbr.m_minp[0], punto.latitud);
-    double longMin = min(mbr.m_minp[1], punto.longitud);
-    double latMax = max(mbr.m_maxp[0], punto.latitud);
-    double longMax = max(mbr.m_maxp[1], punto.longitud);
-
-    return (latMax - latMin) * (longMax - longMin);
-}
-
-double GeoCluster::calcularMBRArea(const MBR& mbr) {
-    return (mbr.m_maxp[0] - mbr.m_minp[0]) * (mbr.m_maxp[1] - mbr.m_minp[1]);
-}
-
-//Funcion chooseSubTree
 Nodo* GeoCluster::chooseSubTree(Nodo* N,const Punto punto, int nivel){
     Nodo* N = raiz; //iniciamos con la raiz
     Nodo* mejor_nodo = nullptr;
@@ -102,6 +87,123 @@ Nodo* GeoCluster::chooseSubTree(Nodo* N,const Punto punto, int nivel){
     }  
     //CS3 : Seleccionar N como el nodo hijo y repetir desde CS2
     return chooseSubTree(N,punto, nivel);
+}
+
+bool GeoCluster::OverFlowTreatment(Nodo* N, const Punto& punto, int nivel) {
+    // OVT1: Si no es raíz y es primera vez en este nivel, hacer reinsert
+    if (N != raiz && niveles_reinsert.find(nivel) == niveles_reinsert.end()) {
+        niveles_reinsert[nivel] = true;
+        reinsert(N, punto);
+        return false;  // No hubo split
+    } else {
+        // Si ya se hizo reinsert en este nivel o es raíz, hacer split
+        Nodo* nuevo_nodo = nullptr;
+        Split(N, nuevo_nodo);
+        return true;  // Hubo split
+    }
+}
+
+void GeoCluster::reinsert(Nodo* N, const Punto& punto) {
+    vector<pair<double, Punto>> distancias;
+    
+    // RI1: Calcular distancias al centro del nodo
+    Point centro = calcularCentroNodo(N);
+    for (const auto& p : N->puntos) {
+        double dist = calcularDistancia(p, centro);
+        distancias.push_back({dist, p});
+    }
+    
+    // RI2: Ordenar por distancia
+    sort(distancias.begin(), distancias.end());
+    
+    // RI3: Remover 30% más lejanos
+    int p = static_cast<int>(N->puntos.size() * PORCENTAJE_PARA_HACER_REINSERT);
+    vector<Punto> puntos_a_reinsertar;
+    
+    for (int i = 0; i < p; i++) {
+        puntos_a_reinsertar.push_back(distancias[i].second);
+    }
+    
+    // Actualizar puntos en N
+    vector<Punto> puntos_restantes;
+    for (int i = p; i < distancias.size(); i++) {
+        puntos_restantes.push_back(distancias[i].second);
+    }
+    N->puntos = puntos_restantes;
+    
+    // Actualizar MBR
+    updateMBR(N);
+    
+    // RI4: Reinsertar puntos
+    for (const auto& p : puntos_a_reinsertar) {
+        insertar(p, N->m_nivel);
+    }
+}
+
+void GeoCluster::Split(Nodo* nodo, Nodo*& nuevo_nodo) {
+    // S1: Elegir eje de división
+    int eje = chooseSplitAxis(nodo->puntos);
+    
+    // S2: Elegir índice de división
+    int split_index = chooseSplitIndex(nodo->puntos, eje);
+    
+    // S3: Distribuir entradas
+    nuevo_nodo = new Nodo(nodo->esHoja);
+    nuevo_nodo->m_nivel = nodo->m_nivel;
+    
+    vector<Punto> grupo1(nodo->puntos.begin(), nodo->puntos.begin() + split_index);
+    vector<Punto> grupo2(nodo->puntos.begin() + split_index, nodo->puntos.end());
+    
+    nodo->puntos = grupo1;
+    nuevo_nodo->puntos = grupo2;
+    
+    // Actualizar MBRs
+    updateMBR(nodo);
+    updateMBR(nuevo_nodo);
+}
+
+
+bool interseccion_mbr_microcluster(const MicroCluster& mbr1, const MBR& rect) {
+    double lat = mbr1.centroId[0];
+    double lon = mbr1.centroId[1];
+
+    return !(lon < rect.m_minp[1] || lon > rect.m_maxp[1] ||
+             lat < rect.m_minp[0]  || lat > rect.m_maxp[0]);
+}
+
+GeoCluster::GeoCluster() {
+    raiz = nullptr;
+    std::cout << "Constructor llamado" << std::endl;
+}
+
+GeoCluster::~GeoCluster() {
+    delete raiz;
+    std::cout << "Destructor llamado" << std::endl;
+}
+
+//Funciones que ayudan a chooseSubTree
+double GeoCluster::calcularCostoOverlap(const MBR& mbr, const Punto& punto){
+    double latMin = min(mbr.m_minp[0], punto.latitud);
+    double longMin = min(mbr.m_minp[1], punto.longitud);
+    double latMax = max(mbr.m_maxp[0], punto.latitud);
+    double longMax = max(mbr.m_maxp[1], punto.longitud);
+
+    double nuevaArea = (latMax-latMin) * (longMax-longMin);
+    double areaOriginal = (mbr.m_maxp[0]- mbr.m_minp[0]) * (mbr.m_maxp[1]- mbr.m_minp[1]);
+    return nuevaArea - areaOriginal;
+}
+
+double GeoCluster::calcularCostoDeAmpliacionArea(const MBR& mbr, const Punto& punto){
+    double latMin = min(mbr.m_minp[0], punto.latitud);
+    double longMin = min(mbr.m_minp[1], punto.longitud);
+    double latMax = max(mbr.m_maxp[0], punto.latitud);
+    double longMax = max(mbr.m_maxp[1], punto.longitud);
+
+    return (latMax - latMin) * (longMax - longMin);
+}
+
+double GeoCluster::calcularMBRArea(const MBR& mbr) {
+    return (mbr.m_maxp[0] - mbr.m_minp[0]) * (mbr.m_maxp[1] - mbr.m_minp[1]);
 }
 
 
@@ -215,77 +317,14 @@ int GeoCluster::chooseSplitIndex(vector<Punto>& puntos, int eje) {
 }
 
 //Funcion Split 
-void GeoCluster::Split(Nodo* nodo, Nodo*& nuevo_nodo) {
-    if (!nodo->esHoja) {
-        cout << "Error: Split solo debe llamarse en nodos hoja" << endl;
-        return;
-    }
 
-    int eje = chooseSplitAxis(nodo->puntos);
-    int splitIndex = chooseSplitIndex(nodo->puntos, eje);
-    
-    vector<Punto> grupo1(nodo->puntos.begin(), nodo->puntos.begin() + splitIndex);
-    vector<Punto> grupo2(nodo->puntos.begin() + splitIndex, nodo->puntos.end());
-    
-    MBR mbrGrupo1 = calcularMBR(grupo1);
-    MBR mbrGrupo2 = calcularMBR(grupo2);
-    
-    nuevo_nodo = new Nodo(true);
-    nuevo_nodo->mbr = mbrGrupo2;
-    nuevo_nodo->puntos = grupo2;
-    nuevo_nodo->m_nivel = nodo->m_nivel;
-    
-    nodo->mbr = mbrGrupo1;
-    nodo->puntos = grupo1;
-}
 
-bool GeoCluster::OverFlowTreatment(Nodo* N, const Punto& punto, int nivel) {
-    // OVT1: Si no es raíz y es primera vez en este nivel, hacer reinsert
-    if (N != raiz && niveles_reinsert.find(nivel) == niveles_reinsert.end()) {
-        niveles_reinsert[nivel] = true;
-        reinsert(N, punto);
-        return false;  // No hubo split
-    } else {
-        // Si ya se hizo reinsert en este nivel o es raíz, hacer split
-        Nodo* nuevo_nodo = nullptr;
-        Split(N, nuevo_nodo);
-        return true;  // Hubo split
-    }
-}
+
 
 
 void GeoCluster::insertIntoLeafNode(Nodo* nodo_hoja, const Punto& punto) {
     nodo_hoja->puntos.push_back(punto);
     nodo_hoja->mbr = calcularMBR(nodo_hoja->puntos);
-}
-
-void GeoCluster::insertar(const Punto& punto, int nivel) {
-    //I1: Llamar a chooseSubTree para encontrar el mejor nodo hoja
-    Nodo* N = raiz;
-    if (raiz == nullptr) {
-        raiz = new Nodo(true); //es hoja
-        raiz->m_nivel = 0;
-    }
-
-    Nodo* nodo_hoja = chooseSubTree(raiz, punto, nivel);
-
-    //I2: Si N tiene menos entradas que M, insertar el punto en N
-    if (nodo_hoja->puntos.size() < MAX_PUNTOS_POR_NODO){
-        insertIntoLeafNode(N,punto);
-        updateMBR(N);
-    } 
-    //S1: Si N tiene M entradas, llamar a OverFlowTreatment
-    else{
-        Nodo* nuevo_nodo = nullptr;
-        bool splite = OverFlowTreatment(N,punto,nivel);
-        
-    }
-}
-
-//Primera funcion que se usa para insertar un punto
-void GeoCluster::InserData(const Punto& punto_a_insertar){
-    niveles_reinsert.clear();
-    insertar(punto_a_insertar,0);
 }
 
 void GeoCluster::insertIntoParent(Nodo* padre, Nodo* nuevo_nodo) {
@@ -312,6 +351,12 @@ void GeoCluster::insertIntoParent(Nodo* padre, Nodo* nuevo_nodo) {
         cout << "Warning: Nodo interno excede capacidad - split no implementado" << endl;
     }
 }
+
+
+
+
+
+
 
 void GeoCluster::updateMBR(Nodo* nodo) {
     if (nodo->esHoja) {
