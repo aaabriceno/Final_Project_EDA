@@ -13,7 +13,7 @@
 using namespace std;
 
 //Primera funcion que se usa para insertar un punto
-void GeoCluster::InserData(const Punto& punto_a_insertar){
+void GeoCluster::inserData(const Punto& punto_a_insertar){
     niveles_reinsert.clear();
     insertar(punto_a_insertar,0);
 }
@@ -107,7 +107,7 @@ void GeoCluster::reinsert(Nodo* N, const Punto& punto) {
     vector<pair<double, Punto>> distancias;
     
     // RI1: Calcular distancias al centro del nodo
-    Point centro = calcularCentroNodo(N);
+    Punto centro = calcularCentroNodo(N);
     for (const auto& p : N->puntos) {
         double dist = calcularDistancia(p, centro);
         distancias.push_back({dist, p});
