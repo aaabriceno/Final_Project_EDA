@@ -11,7 +11,6 @@
 
 using namespace std;
 
-//const int MAX_NIVEL = 5; //Maximo nivel de nodos
 const int MAX_PUNTOS_POR_NODO = 10; //Maximo de puntos por nodo
 const int MIN_PUNTOS_POR_NODO = 2;  //Minimo de puntos por nodo
 const double PORCENTAJE_PARA_HACER_REINSERT = 0.3; //para poder hacer reinsert
@@ -77,7 +76,7 @@ struct Nodo{
     MBR mbr;
     vector<Nodo*> hijos;  
     vector<Punto> puntos; //Solo para las hojas
-    vector<MicroCluster> microclusters_en_Hoja;
+    vector<MicroCluster> microclusters_en_Hoja; //Solo para las hojas
     Nodo* padre; //Puntero al padre
     Nodo(bool esHoja = false) : esHoja(esHoja), m_nivel(0), padre(nullptr) {}
 };
@@ -104,6 +103,8 @@ private:
     double calcularCostoDeAmpliacionArea(const MBR& mbr, const Punto& punto);
     double calcularMBRArea(const MBR& mbr);
     Nodo* chooseSubTree(Nodo* N,const Punto punto, int nivel);
+    
+    bool OverFlowTreatment(Nodo*N, const Punto& punto, int nivel);   
     
     int chooseSplitAxis(const vector<Punto>& puntos);
     int chooseSplitIndex(vector<Punto>& puntos, int eje);
