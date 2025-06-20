@@ -67,7 +67,7 @@ vector<Punto> leerCSV(const string& archivo) {
                 cerr << "Error en línea " << numeroLinea << ": tripID vacío" << endl;
                 continue;
             }
-            id = stoi(campo);
+        id = stoi(campo);
 
             // Leer pickup_latitude (latitud)
             if (!getline(ss, campo, ',')) {
@@ -78,7 +78,7 @@ vector<Punto> leerCSV(const string& archivo) {
                 cerr << "Error en línea " << numeroLinea << ": Latitud vacía" << endl;
                 continue;
             }
-            lat = stod(campo);
+        lat = stod(campo);
 
             // Leer pickup_longitude (longitud)
             if (!getline(ss, campo, ',')) {
@@ -89,17 +89,17 @@ vector<Punto> leerCSV(const string& archivo) {
                 cerr << "Error en línea " << numeroLinea << ": Longitud vacía" << endl;
                 continue;
             }
-            lon = stod(campo);
+        lon = stod(campo);
 
             // Leer los atributos restantes (passenger_count, trip_distance, payment_type, etc.)
-            while (getline(ss, campo, ',')) {
+        while (getline(ss, campo, ',')) {
                 if (!campo.empty()) {
-                    atributos.push_back(stod(campo));
+            atributos.push_back(stod(campo));
                 }
-            }
+        }
 
-            // Crear el punto y agregarlo al vector de puntos
-            puntos.push_back(Punto(id, lat, lon, atributos));
+        // Crear el punto y agregarlo al vector de puntos
+        puntos.push_back(Punto(id, lat, lon, atributos));
             cout << "Punto leído: ID=" << id << ", Lat=" << lat << ", Lon=" << lon << ", Atributos=" << atributos.size() << endl;
             
         } catch (const std::invalid_argument& e) {
@@ -199,21 +199,39 @@ vector<Punto> leerBinario(const string& archivoBinario) {
     
     // Leer cada punto
     for (int i = 0; i < numPuntos; i++) {
-        PuntoBinario puntoBin;
-        archivoBin.read(reinterpret_cast<char*>(&puntoBin), sizeof(PuntoBinario));
+        // Leer ID
+        int id;
+        archivoBin.read(reinterpret_cast<char*>(&id), sizeof(int));
         
-        // Convertir a estructura Punto
+        // Leer latitud y longitud
+        double lat, lon;
+        archivoBin.read(reinterpret_cast<char*>(&lat), sizeof(double));
+        archivoBin.read(reinterpret_cast<char*>(&lon), sizeof(double));
+        
+        // Leer número de atributos
+        int num_atributos;
+        archivoBin.read(reinterpret_cast<char*>(&num_atributos), sizeof(int));
+        
+        // Leer atributos (máximo 12)
         vector<double> atributos;
-        for (int j = 0; j < puntoBin.num_atributos; j++) {
-            atributos.push_back(puntoBin.atributos[j]);
+        for (int j = 0; j < 12; j++) {
+            double atributo;
+            archivoBin.read(reinterpret_cast<char*>(&atributo), sizeof(double));
+            if (j < num_atributos) {
+                atributos.push_back(atributo);
+            }
         }
         
-        puntos.push_back(Punto(puntoBin.id, puntoBin.latitud, puntoBin.longitud, atributos));
+        puntos.push_back(Punto(id, lat, lon, atributos));
         
         if (i < 5) {  // Mostrar solo los primeros 5 puntos como ejemplo
-            cout << "Punto " << i+1 << ": ID=" << puntoBin.id 
-                 << ", Lat=" << puntoBin.latitud << ", Lon=" << puntoBin.longitud 
-                 << ", Atributos=" << puntoBin.num_atributos << endl;
+            cout << "Punto " << i+1 << ": ID=" << id 
+                 << ", Lat=" << lat << ", Lon=" << lon 
+                 << ", Atributos=" << num_atributos << endl;
+        }
+        
+        if (i % 10000 == 0 && i > 0) {
+            cout << "Procesados " << i << " puntos..." << endl;
         }
     }
     
@@ -236,55 +254,113 @@ int main() {
     
     vector<Punto> puntos;
     
+    cout << "==========================================" << endl;
+    cout << "        GEOCLUSTER-TREE LOADER" << endl;
+    cout << "==========================================" << endl;
+    cout << endl;
+    
     // Verificar si existe el archivo binario
-    if (archivoExiste(archivoBinario)) {
-        cout << "Archivo binario encontrado. Leyendo desde binario..." << endl;
-        puntos = leerBinario(archivoBinario);
+    bool existeBinario = archivoExiste(archivoBinario);
+    bool existeCSV = false;
+    
+    // Verificar si existe el archivo CSV
+    vector<string> rutasPosibles = {
+        archivoCSV,
+        "Database/puntos500k.csv",
+        "./Database/puntos500k.csv",
+        "../Database/puntos500k.csv",
+        "Database\\puntos500k.csv",
+        "puntos500k.csv"
+    };
+    
+    string rutaCSV = "";
+    for (const string& ruta : rutasPosibles) {
+        if (archivoExiste(ruta)) {
+            rutaCSV = ruta;
+            existeCSV = true;
+            break;
+        }
+    }
+    
+    // Mostrar opciones disponibles
+    cout << "Archivos disponibles:" << endl;
+    if (existeBinario) {
+        cout << "✓ Archivo binario encontrado: " << archivoBinario << endl;
     } else {
-        cout << "Archivo binario no encontrado. Verificando archivo CSV..." << endl;
-        
-        // Intentar diferentes rutas posibles para el CSV
-        vector<string> rutasPosibles = {
-            archivoCSV,
-            "Database/puntos500k.csv",
-            "./Database/puntos500k.csv",
-            "../Database/puntos500k.csv",
-            "Database\\puntos500k.csv",
-            "puntos500k.csv"
-        };
-        
-        string rutaCSV = "";
-        
-        cout << "Buscando archivo puntos500k.csv..." << endl;
-        
-        for (const string& ruta : rutasPosibles) {
-            cout << "Probando: " << ruta << " - ";
-            if (archivoExiste(ruta)) {
-                cout << "¡ENCONTRADO!" << endl;
-                rutaCSV = ruta;
-                break;
+        cout << "✗ Archivo binario no encontrado" << endl;
+    }
+    
+    if (existeCSV) {
+        cout << "✓ Archivo CSV encontrado: " << rutaCSV << endl;
+    } else {
+        cout << "✗ Archivo CSV no encontrado" << endl;
+    }
+    cout << endl;
+    
+    // Menú de opciones
+    int opcion = 0;
+    if (existeBinario && existeCSV) {
+        cout << "Opciones disponibles:" << endl;
+        cout << "1. Leer archivo binario (más rápido)" << endl;
+        cout << "2. Leer archivo CSV directamente" << endl;
+        cout << "3. Convertir CSV a binario y luego leer binario" << endl;
+        cout << "4. Salir" << endl;
+        cout << endl;
+        cout << "Selecciona una opción (1-4): ";
+        cin >> opcion;
+    } else if (existeBinario) {
+        cout << "Solo archivo binario disponible. Leyendo binario..." << endl;
+        opcion = 1;
+    } else if (existeCSV) {
+        cout << "Solo archivo CSV disponible. Leyendo CSV..." << endl;
+        opcion = 2;
+    } else {
+        cout << "ERROR: No se encontraron archivos de datos" << endl;
+        cout << "Asegúrate de que existe puntos500k.csv en la carpeta Database/" << endl;
+        return 1;
+    }
+    
+    // Procesar la opción seleccionada
+    switch (opcion) {
+        case 1: // Leer binario
+            if (existeBinario) {
+                cout << "Leyendo archivo binario..." << endl;
+                puntos = leerBinario(archivoBinario);
             } else {
-                cout << "No encontrado" << endl;
+                cout << "ERROR: Archivo binario no encontrado" << endl;
+                return 1;
             }
-        }
-        
-        if (rutaCSV.empty()) {
-            std::cerr << "ERROR: No se pudo encontrar el archivo puntos500k.csv en ninguna ruta" << std::endl;
-            std::cerr << "Asegúrate de que el archivo existe en la carpeta Database/" << std::endl;
+            break;
+            
+        case 2: // Leer CSV directamente
+            if (existeCSV) {
+                cout << "Leyendo archivo CSV directamente..." << endl;
+                puntos = leerCSV(rutaCSV);
+            } else {
+                cout << "ERROR: Archivo CSV no encontrado" << endl;
+                return 1;
+            }
+            break;
+            
+        case 3: // Convertir CSV a binario y leer
+            if (existeCSV) {
+                cout << "Convirtiendo CSV a binario..." << endl;
+                convertirCSVaBinario(rutaCSV, archivoBinario);
+                cout << "Leyendo archivo binario recién creado..." << endl;
+                puntos = leerBinario(archivoBinario);
+            } else {
+                cout << "ERROR: Archivo CSV no encontrado para conversión" << endl;
+                return 1;
+            }
+            break;
+            
+        case 4: // Salir
+            cout << "Saliendo..." << endl;
+            return 0;
+            
+        default:
+            cout << "Opción inválida. Saliendo..." << endl;
             return 1;
-        }
-        
-        cout << "Usando archivo CSV: " << rutaCSV << endl;
-        puntos = leerCSV(rutaCSV);
-        
-        // Convertir a binario para uso futuro
-        cout << "\n¿Deseas convertir el CSV a formato binario para uso futuro? (s/n): ";
-        char respuesta;
-        cin >> respuesta;
-        
-        if (respuesta == 's' || respuesta == 'S') {
-            convertirCSVaBinario(rutaCSV, archivoBinario);
-        }
     }
     
     if (puntos.empty()) {
