@@ -111,6 +111,7 @@ public:
     MBR calcularMBR(const vector<Punto>& puntos);
     void imprimirArbol(Nodo* nodo = nullptr, int nivel = 0);
     int contarPuntosEnArbol(Nodo* nodo = nullptr);
+    void verificarDuplicados();
 
 private:
     Nodo* raiz = nullptr;
@@ -145,6 +146,9 @@ private:
     bool estaDentroDelMBR(const Punto& punto, const MBR& mbr);
     double computeArea(double ax1, double ay1, double ax2, double ay2,
                       double bx1, double by1, double bx2, double by2);
+    
+    // Funciones auxiliares para verificación
+    void verificarDuplicadosRec(Nodo* nodo, vector<int>& ids);
 };
 
 #endif
