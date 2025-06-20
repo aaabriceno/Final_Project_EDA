@@ -33,11 +33,18 @@ int main() {
     for (const auto& punto : puntos) {
         geoCluster.inserData(punto);
         cout << "Insertando punto " << punto.id << ": (" << punto.latitud << ", " << punto.longitud << ")" << endl;
+        
+        // Verificar puntos en el árbol después de cada inserción
+        int puntosActuales = geoCluster.contarPuntosEnArbol();
+        cout << "  Puntos en árbol después de insertar " << punto.id << ": " << puntosActuales << endl;
     }
     
     cout << "\n=== ESTRUCTURA DEL ÁRBOL R*-TREE ===" << endl;
     geoCluster.imprimirArbol();
     cout << "=====================================" << endl;
+    
+    // Verificar duplicados
+    geoCluster.verificarDuplicados();
     
     int puntosEnArbol = geoCluster.contarPuntosEnArbol();
     cout << "\nTotal de puntos en el árbol: " << puntosEnArbol << " (esperados: " << puntos.size() << ")" << endl;
@@ -46,7 +53,7 @@ int main() {
         cout << "¡ADVERTENCIA! Faltan " << (puntos.size() - puntosEnArbol) << " puntos en el árbol" << endl;
     }
     
-    MBR rango(19,-72,22,-69);
+    MBR rango(19,-72,20.5,-69);
     Nodo* raiz = geoCluster.getRaiz();
 
     cout << "\nBuscando puntos en rango: (" << rango.m_minp[0] << "," << rango.m_minp[1] << ") a (" 

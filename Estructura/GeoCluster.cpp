@@ -234,6 +234,10 @@ Nodo* GeoCluster::encontrarPadre(Nodo* raiz, Nodo* hijo) {
 }
 
 void GeoCluster::propagateSplit(Nodo* nodo_original, Nodo* nuevo_nodo) {
+    cout << "  Debug: === PROPAGANDO SPLIT ===" << endl;
+    cout << "    Nodo original: " << nodo_original->puntos.size() << " puntos" << endl;
+    cout << "    Nuevo nodo: " << nuevo_nodo->puntos.size() << " puntos" << endl;
+    
     if (nodo_original == raiz) {
         // Crear nueva raíz
         Nodo* nueva_raiz = new Nodo(false);
@@ -241,29 +245,43 @@ void GeoCluster::propagateSplit(Nodo* nodo_original, Nodo* nuevo_nodo) {
         nueva_raiz->hijos.push_back(nuevo_nodo);
         nueva_raiz->m_nivel = nodo_original->m_nivel + 1;
         
+        cout << "    Creando nueva raíz con 2 hijos:" << endl;
+        cout << "      Hijo 0: " << nodo_original->puntos.size() << " puntos" << endl;
+        cout << "      Hijo 1: " << nuevo_nodo->puntos.size() << " puntos" << endl;
+        
         // Actualizar MBR de la nueva raíz
         nueva_raiz->mbr = nodo_original->mbr;
         nueva_raiz->mbr.stretch(nuevo_nodo->mbr);
         
         raiz = nueva_raiz;
+        cout << "    Nueva raíz creada en nivel " << nueva_raiz->m_nivel << endl;
     } else {
         // Encontrar padre y actualizar
         Nodo* padre = encontrarPadre(raiz, nodo_original);
         if (padre != nullptr) {
+            int indice_hijo = padre->hijos.size();
             padre->hijos.push_back(nuevo_nodo);
             updateMBR(padre);
             
+            cout << "    Agregando hijo " << indice_hijo << " con " 
+                 << nuevo_nodo->puntos.size() << " puntos al padre (nivel " << padre->m_nivel << ")" << endl;
+            cout << "    Padre ahora tiene " << padre->hijos.size() << " hijos" << endl;
+            
             // Si el padre se desborda, aplicar overflow treatment
             if (padre->hijos.size() > MAX_PUNTOS_POR_NODO) {
+                cout << "    ¡Padre se desborda! Aplicando overflow treatment..." << endl;
                 // Crear un punto dummy para la llamada
                 Punto punto_dummy;
                 punto_dummy.id = -1;
                 punto_dummy.latitud = 0.0;
                 punto_dummy.longitud = 0.0;
-                OverFlowTreatment(padre, Punto(), padre->m_nivel);
+                OverFlowTreatment(padre, punto_dummy, padre->m_nivel);
             }
+        } else {
+            cout << "    ERROR: No se encontró padre para el nodo" << endl;
         }
     }
+    cout << "  Debug: === FIN PROPAGACIÓN SPLIT ===" << endl;
 }
 
 void GeoCluster::Split(Nodo* nodo, Nodo*& nuevo_nodo) {
@@ -604,6 +622,36 @@ void GeoCluster::imprimirArbol(Nodo* nodo, int nivel) {
         for (size_t i = 0; i < nodo->hijos.size(); i++) {
             cout << indent << "  Hijo " << i << ":" << endl;
             imprimirArbol(nodo->hijos[i], nivel + 1);
+        }
+    }
+}
+
+void GeoCluster::verificarDuplicados() {
+    vector<int> ids_encontrados;
+    verificarDuplicadosRec(raiz, ids_encontrados);
+    
+    cout << "\n=== VERIFICACIÓN DE DUPLICADOS ===" << endl;
+    cout << "Total de IDs únicos encontrados: " << ids_encontrados.size() << endl;
+    
+    // Ordenar y verificar duplicados
+    sort(ids_encontrados.begin(), ids_encontrados.end());
+    for (size_t i = 1; i < ids_encontrados.size(); i++) {
+        if (ids_encontrados[i] == ids_encontrados[i-1]) {
+            cout << "¡DUPLICADO ENCONTRADO! ID: " << ids_encontrados[i] << endl;
+        }
+    }
+}
+
+void GeoCluster::verificarDuplicadosRec(Nodo* nodo, vector<int>& ids) {
+    if (nodo == nullptr) return;
+    
+    if (nodo->esHoja) {
+        for (const auto& punto : nodo->puntos) {
+            ids.push_back(punto.id);
+        }
+    } else {
+        for (Nodo* hijo : nodo->hijos) {
+            verificarDuplicadosRec(hijo, ids);
         }
     }
 }
