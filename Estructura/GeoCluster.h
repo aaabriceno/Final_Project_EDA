@@ -23,10 +23,14 @@ struct Punto{
     vector <double> atributos; //12 attributos a 6-8 aproximadamente
     int id_cluster_geografico, id_subcluster_atributivo;
     
+    // Constructor por defecto
+    Punto() : id(0), latitud(0.0), longitud(0.0), atributos({}) {}
+
     // Constructor para inicializar el punto
     Punto(int _id, double _lat, double _lon, const std::vector<double>& _atributos)
         : id(_id), latitud(_lat), longitud(_lon), atributos(_atributos) {}
-    // Operador < para permitir ordenamiento
+    
+        // Operador < para permitir ordenamiento
     bool operator< (const Punto& other) const {
         if (latitud != other.latitud) {
             return latitud < other.latitud;
