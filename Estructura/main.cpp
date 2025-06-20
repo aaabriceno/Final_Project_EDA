@@ -1,6 +1,10 @@
 #include "GeoCluster.cpp"
 #include <vector>
 #include <algorithm>
+#include <fstream>
+#include <sstream>
+#include <string>
+using namespace std;
 
 bool compararPorLatitudYLongitud(const Punto& p1, const Punto& p2) {
     // Primero comparar por latitud
@@ -12,11 +16,67 @@ bool compararPorLatitudYLongitud(const Punto& p1, const Punto& p2) {
     return p1.latitud < p2.latitud;
 }
 
+vector<Punto> leerCSV(const string& archivo) {
+    vector<Punto> puntos;
+    ifstream archivoCSV(archivo);  // Abrir el archivo CSV
+
+    if (!archivoCSV.is_open()) {
+        cerr << "Error al abrir el archivo." << endl;
+        return puntos;  // Si no se puede abrir, devolver un vector vacío
+    }
+
+    string linea;
+    // Leer cada línea del archivo
+    while (getline(archivoCSV, linea)) {
+        stringstream ss(linea);
+        string campo;
+
+        int id;
+        double lat, lon;
+        vector<double> atributos;
+
+        // Leer los datos de cada columna
+        getline(ss, campo, ',');  // ID
+        id = stoi(campo);
+
+        getline(ss, campo, ',');  // Latitud
+        lat = stod(campo);
+
+        getline(ss, campo, ',');  // Longitud
+        lon = stod(campo);
+
+        // Leer los atributos (valores después de la longitud)
+        while (getline(ss, campo, ',')) {
+            atributos.push_back(stod(campo));
+        }
+
+        // Crear el punto y agregarlo al vector de puntos
+        puntos.push_back(Punto(id, lat, lon, atributos));
+    }
+
+    archivoCSV.close();  // Cerrar el archivo
+    return puntos;
+}
+
+bool archivoExiste(const std::string& archivo) {
+    std::ifstream file(archivo);
+    return file.good();  // Retorna true si el archivo se puede abrir
+}
+
+
 int main() {
     // Crear un objeto de la clase GeoCluster
     GeoCluster geoCluster;
 
+    string rutaCSV = "puntos10.csv";  // Ruta correcta desde Estructura hacia Database
+
+    if (!archivoExiste(rutaCSV)) {
+        std::cerr << "No se pudo encontrar el archivo CSV en la ruta especificada: " << rutaCSV << std::endl;
+        return 1;  // Salir del programa si el archivo no existe
+    }
+    vector<Punto> puntos = leerCSV(rutaCSV);
     // Crear algunos puntos de ejemplo
+    /*
     vector<Punto> puntos = {
     {1, 19.5, -70.5, {1.0, 2.0, 3.0}},
     {2, 20.0, -70.2, {1.5, 2.5, 3.5}},
@@ -119,6 +179,7 @@ int main() {
     {99, -4.20, 137.17, {2.95, 3.31, 4.13}},
     {100, 16.41, -110.46, {3.71, 4.15, 2.90}}
 };
+    */
     cout << "\n=== INSERCION DE PUNTOS ===" << endl;
     for (const auto& punto : puntos) {
         geoCluster.inserData(punto);
@@ -142,7 +203,7 @@ int main() {
     if (puntosEnArbol != puntos.size()) {
         cout << "¡ADVERTENCIA! Faltan " << (puntos.size() - puntosEnArbol) << " puntos en el árbol" << endl;
     }
-    
+    /*
     MBR rango(19,-72,20.5,-69);
     Nodo* raiz = geoCluster.getRaiz();
 
@@ -156,6 +217,8 @@ int main() {
     for (const auto& punto : puntosEncontradosEnRango) {
         cout << "ID: " << punto.id << ", Latitud: " << punto.latitud << ", Longitud: " << punto.longitud << endl;
     }
+    */
+    
     
     
     // Calcular y mostrar el MBR de todos los puntos
