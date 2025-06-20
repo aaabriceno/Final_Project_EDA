@@ -8,11 +8,20 @@
 #include <unordered_map>
 #include <iostream>
 #include <limits>
+#include <iomanip>
+
 using namespace std;
 
+// Configurar precisión global para todos los números de punto flotante
+void configurarPrecision() {
+    cout.setf(ios::fixed, ios::floatfield);
+    cout.precision(10);
+}
+
 GeoCluster::GeoCluster() {
-    //raiz = nullptr;
-    std::cout << "Constructor llamado" << std::endl;
+    cout << "Constructor llamado" << endl;
+    raiz = nullptr;
+    configurarPrecision();  // Configurar precisión para todos los números
 }
 
 GeoCluster::~GeoCluster() {
