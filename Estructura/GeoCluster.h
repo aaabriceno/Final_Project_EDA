@@ -11,9 +11,11 @@
 
 using namespace std;
 
-const int MAX_PUNTOS_POR_NODO = 100; //Maximo de puntos por nodo
-const int MIN_PUNTOS_POR_NODO = 40;  //Minimo de puntos por nodo
-const double PORCENTAJE_PARA_HACER_REINSERT = 0.3; //para poder hacer reinsert
+// Parámetros optimizados para 500,000 puntos
+// Cálculo: sqrt(500,000) * 0.5 = 353
+const int MAX_PUNTOS_POR_NODO = 350; // Máximo de puntos por nodo (reducido para estabilidad)
+const int MIN_PUNTOS_POR_NODO = 140;  // Mínimo de puntos por nodo (40% del máximo)
+const double PORCENTAJE_PARA_HACER_REINSERT = 0.3; // Para poder hacer reinsert
 
 
 //Estructura Punto

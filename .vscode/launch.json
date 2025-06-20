@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/anthony/Final_Project_EDA",
-      "program": "c:/Users/anthony/Final_Project_EDA/build/Debug/outDebug",
+      "cwd": "c:/Users/anthony/Final_Project_EDA/Estructura",
+      "program": "c:/Users/anthony/Final_Project_EDA/Estructura/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
