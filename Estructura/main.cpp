@@ -29,29 +29,46 @@ int main() {
     {9, 19.8, -70.4, {1.6, 2.6, 3.6}},
     {10, 21.2, -70.1, {2.1, 3.1, 4.1}},
     };
+    cout << "\n=== INSERCIÓN DE PUNTOS ===" << endl;
     for (const auto& punto : puntos) {
-        geoCluster.InserData(punto);
-        cout << "Insertando punto: " << punto.latitud << " "<< punto.longitud << endl;
+        geoCluster.inserData(punto);
+        cout << "Insertando punto " << punto.id << ": (" << punto.latitud << ", " << punto.longitud << ")" << endl;
     }
+    
+    cout << "\n=== ESTRUCTURA DEL ÁRBOL R*-TREE ===" << endl;
+    geoCluster.imprimirArbol();
+    cout << "=====================================" << endl;
+    
+    int puntosEnArbol = geoCluster.contarPuntosEnArbol();
+    cout << "\nTotal de puntos en el árbol: " << puntosEnArbol << " (esperados: " << puntos.size() << ")" << endl;
+    
+    if (puntosEnArbol != puntos.size()) {
+        cout << "¡ADVERTENCIA! Faltan " << (puntos.size() - puntosEnArbol) << " puntos en el árbol" << endl;
+    }
+    
     MBR rango(19,-72,22,-69);
     Nodo* raiz = geoCluster.getRaiz();
 
-    vector<Punto> puntosEncontradosEnRango = geoCluster.buscarPuntosDentroInterseccion(rango,raiz);
+    cout << "\nBuscando puntos en rango: (" << rango.m_minp[0] << "," << rango.m_minp[1] << ") a (" 
+         << rango.m_maxp[0] << "," << rango.m_maxp[1] << ")" << endl;
+
+    vector<Punto> puntosEncontradosEnRango = geoCluster.buscarPuntosDentroInterseccion(rango, raiz);
     
-    cout << "\nPuntos encontrados dentro de la intersección del MBR de búsqueda:" << endl;
+    cout << "\nPuntos encontrados dentro de la intersección del MBR de búsqueda: " 
+         << puntosEncontradosEnRango.size() << " puntos" << endl;
     for (const auto& punto : puntosEncontradosEnRango) {
         cout << "ID: " << punto.id << ", Latitud: " << punto.latitud << ", Longitud: " << punto.longitud << endl;
     }
     
     
     // Calcular y mostrar el MBR de todos los puntos
-    //MBR mbr = geoCluster.calcularMBR(puntos);
-    /*
+    MBR mbr = geoCluster.calcularMBR(puntos);
+    
     // Imprimir el MBR
     cout << "\nMBR de los  puntos:" << endl;
     cout << "Latitud mínima: " << mbr.m_minp[0] << ", Longitud mínima: " << mbr.m_minp[1] << endl;
     cout << "Latitud máxima: " << mbr.m_maxp[0] << ", Longitud máxima: " << mbr.m_maxp[1] << endl;
-    */
+    
     
     return 0;
 }

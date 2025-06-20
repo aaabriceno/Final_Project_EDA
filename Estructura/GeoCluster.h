@@ -11,8 +11,8 @@
 
 using namespace std;
 
-const int MAX_PUNTOS_POR_NODO = 10; //Maximo de puntos por nodo
-const int MIN_PUNTOS_POR_NODO = 2;  //Minimo de puntos por nodo
+const int MAX_PUNTOS_POR_NODO = 8; //Maximo de puntos por nodo
+const int MIN_PUNTOS_POR_NODO = 1;  //Minimo de puntos por nodo
 const double PORCENTAJE_PARA_HACER_REINSERT = 0.3; //para poder hacer reinsert
 
 
@@ -22,6 +22,17 @@ struct Punto{
     double latitud, longitud;
     vector <double> atributos; //12 attributos a 6-8 aproximadamente
     int id_cluster_geografico, id_subcluster_atributivo;
+    
+    // Operador < para permitir ordenamiento
+    bool operator<(const Punto& other) const {
+        if (latitud != other.latitud) {
+            return latitud < other.latitud;
+        }
+        if (longitud != other.longitud) {
+            return longitud < other.longitud;
+        }
+        return id < other.id;
+    }
 };
 
 //Estructura MBR
@@ -90,7 +101,7 @@ public:
     
     //Funciones para insercion de datos
     void inserData(const Punto& punto);
-    void insertar(const Punto& punto,int nivel);
+        void insertar(const Punto& punto,int nivel);
 
     //FUNCIONES 1 Y 2
     vector<Punto> n_puntos_similiares_a_punto(const Punto& punto_de_busqueda, MBR& rango, int numero_de_puntos_similares);
@@ -98,6 +109,8 @@ public:
     
     vector<Punto> buscarPuntosDentroInterseccion(const MBR& rango, Nodo* nodo);
     MBR calcularMBR(const vector<Punto>& puntos);
+    void imprimirArbol(Nodo* nodo = nullptr, int nivel = 0);
+    int contarPuntosEnArbol(Nodo* nodo = nullptr);
 
 private:
     Nodo* raiz = nullptr;
@@ -110,7 +123,10 @@ private:
 
     bool OverFlowTreatment(Nodo*N, const Punto& punto, int nivel);   
         void reinsert(Nodo* N, const Punto& punto);
-            
+            Punto calcularCentroNodo(Nodo* nodo);
+            double calcularDistancia(const Punto& p1, const Punto& p2);
+            Nodo* encontrarPadre(Nodo* raiz, Nodo* hijo);
+            void propagateSplit(Nodo* nodo_original, Nodo* nuevo_nodo);
         void Split(Nodo* nodo, Nodo*& nuevo_nodo);
             int chooseSplitAxis(const vector<Punto>& puntos);
                 double calcularMargen(const MBR& mbr);
