@@ -11,8 +11,8 @@
 
 using namespace std;
 
-const int MAX_PUNTOS_POR_NODO = 8; //Maximo de puntos por nodo
-const int MIN_PUNTOS_POR_NODO = 1;  //Minimo de puntos por nodo
+const int MAX_PUNTOS_POR_NODO = 100; //Maximo de puntos por nodo
+const int MIN_PUNTOS_POR_NODO = 40;  //Minimo de puntos por nodo
 const double PORCENTAJE_PARA_HACER_REINSERT = 0.3; //para poder hacer reinsert
 
 
@@ -23,8 +23,11 @@ struct Punto{
     vector <double> atributos; //12 attributos a 6-8 aproximadamente
     int id_cluster_geografico, id_subcluster_atributivo;
     
+    // Constructor para inicializar el punto
+    Punto(int _id, double _lat, double _lon, const std::vector<double>& _atributos)
+        : id(_id), latitud(_lat), longitud(_lon), atributos(_atributos) {}
     // Operador < para permitir ordenamiento
-    bool operator<(const Punto& other) const {
+    bool operator< (const Punto& other) const {
         if (latitud != other.latitud) {
             return latitud < other.latitud;
         }
@@ -49,7 +52,7 @@ struct MBR{
     }
 
     void reset(){
-         m_minp[0] = m_minp[1] = std::numeric_limits<double>::max();
+        m_minp[0] = m_minp[1] = std::numeric_limits<double>::max();
         m_maxp[0] = m_maxp[1] = std::numeric_limits<double>::lowest();
     }
 
