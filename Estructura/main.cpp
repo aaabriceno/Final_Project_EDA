@@ -249,8 +249,8 @@ int main() {
     GeoCluster geoCluster;
 
     // Configuración de archivos
-    string archivoCSV = "C:/Users/anthony/Final_Project_EDA/Database/puntos500k.csv";
-    string archivoBinario = "C:/Users/anthony/Final_Project_EDA/Database/puntos500k.bin";
+    string archivoCSV = "C:/Users/anthony/Final_Project_EDA/Database/puntos10k.csv";
+    string archivoBinario = "C:/Users/anthony/Final_Project_EDA/Database/puntos10kk.bin";
     
     vector<Punto> puntos;
     
@@ -266,11 +266,11 @@ int main() {
     // Verificar si existe el archivo CSV
     vector<string> rutasPosibles = {
         archivoCSV,
-        "Database/puntos500k.csv",
-        "./Database/puntos500k.csv",
-        "../Database/puntos500k.csv",
-        "Database\\puntos500k.csv",
-        "puntos500k.csv"
+        "Database/puntos10k.csv",
+        "./Database/puntos10k.csv",
+        "../Database/puntos10k.csv",
+        "Database\\puntos10k.csv",
+        "puntos10k.csv"
     };
     
     string rutaCSV = "";
