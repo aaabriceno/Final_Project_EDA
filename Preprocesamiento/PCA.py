@@ -102,6 +102,7 @@ k_auto = np.searchsorted(varianza_acumulada, umbral) + 1
 print(f"\nSe seleccionan {k_auto} componentes para explicar al menos el {umbral*100:.1f}% de la varianza")
 
 # Usar k automático, pero con límite razonable
+#k = 6
 k = min(k_auto, n_atributos)  # Máximo igual al número de atributos originales
 print(f"Usando k = {k} componentes (de {n_atributos} atributos originales)")
 
@@ -124,7 +125,7 @@ print(X_pca[:5])
 # Concatenar lat, long con componentes principales
 X_final = np.hstack((latlong, X_pca))
 print(f"\nForma final con lat, long y PCA: {X_final.shape}")
-np.set_printoptions(precision=4, suppress=True)
+np.set_printoptions(precision=14, suppress=True)
 print("Primeras 3 filas del resultado final:")
 print(X_final[:3])
 
@@ -132,12 +133,9 @@ print(X_final[:3])
 columnas_pca = [f'PC{i+1}' for i in range(k)]
 df_final = pd.DataFrame(X_final, columns=['lat', 'long'] + columnas_pca)
 
-# Guardar en CSV con 4 decimales
-df_final_redondeado = df_final.copy()
-df_final_redondeado[columnas_pca] = df_final_redondeado[columnas_pca].round(4)
-
-df_final_redondeado.to_csv('Preprocesamiento/pca_4_dec.csv', index=False)
-print(f"\nDatos PCA guardados en 'Preprocesamiento/pca_4_dec.csv'")
+# Guardar en CSV sin redondear (mantener precisión completa)
+df_final.to_csv('Database/pca_data_set_complete.csv', index=False)
+print(f"\nDatos PCA guardados en 'Database/pca_data_set_complete.csv' (sin redondear)")
 
 # Mostrar información sobre las componentes principales
 print(f"\nInformación de las componentes principales:")
