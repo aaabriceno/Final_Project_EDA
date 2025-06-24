@@ -1,12 +1,14 @@
 import pandas as pd
 import numpy as np
 
+#Analizamos algun tipo de anomalia en los datos, ya sea valores negativ, etc
+
 # Cargar el archivo de datos
 print("ANALIZANDO DATOS PARA IDENTIFICAR VALORES EXTRAÑOS")
 print("=" * 60)
 
 try:
-    df = pd.read_csv('Database/processed_data_complete.csv')
+    df = pd.read_csv('Database/1processed_data_complete.csv')
     print(f"Archivo cargado exitosamente: {df.shape[0]} filas, {df.shape[1]} columnas")
 except Exception as e:
     print(f"Error cargando archivo: {e}")
