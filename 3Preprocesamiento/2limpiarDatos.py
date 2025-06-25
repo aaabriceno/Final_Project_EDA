@@ -1,12 +1,12 @@
 import pandas as pd
 import numpy as np
 
-print("=== SCRIPT DE LIMPIEZA DE DATOS ===")
+print("CODIGO DE LIMPIEZA DE DATOS")
 
 # Cargar archivo CSV original
-print("Cargando archivo original...")
-df = pd.read_csv('Database/1processed_data_complete.csv')
-print(f"Forma del dataset original: {df.shape}")
+print("Carga de archivo original:")
+df = pd.read_csv('Database/puntos500k.csv')
+print(f"Forma del dataset original: {df.shape}") #Tamano del dataframe (filas y columnas)
 print(f"Registros originales: {df.shape[0]:,}")
 
 # Verificar columnas existentes
@@ -20,8 +20,8 @@ atributos_para_pca = [
 
 print(f"\nAtributos que se usarán para PCA: {atributos_para_pca}")
 
-# Verificar que no hay valores NaN en los atributos de PCA
-print(f"Valores NaN en atributos PCA: {df[atributos_para_pca].isnull().sum().sum()}")
+# Verificar que no hay valores que no son numeros en los atributos de PCA
+print(f"Valores No Numeros en atributos PCA: {df[atributos_para_pca].isnull().sum().sum()}")
 
 # Verificar valores negativos en todos los atributos de tarifa
 atributos_tarifa = ['fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount', 'improvement_surcharge']
@@ -40,7 +40,7 @@ for columna in atributos_tarifa:
         df[columna] = df[columna] + abs(min_valor)
         print(f"  Nuevo min en {columna}: {df[columna].min()}")
 
-# Recalcular total_amount
+# Recalculando total_amount
 print("\nRecalculando total_amount...")
 df['total_amount'] = (
     df['fare_amount'] + df['extra'] + df['mta_tax'] +
@@ -52,12 +52,12 @@ print(f"\nRegistros después de la limpieza: {df.shape[0]:,}")
 print(f"¿Se mantuvieron todos los registros? {df.shape[0] == df.shape[0]}")
 
 # Verificar que no hay valores NaN después de la limpieza
-print(f"Valores NaN después de la limpieza: {df[atributos_para_pca].isnull().sum().sum()}")
+print(f"Valores No Numeros después de la limpieza: {df[atributos_para_pca].isnull().sum().sum()}")
 
 # Guardar archivo limpio
 print("\nGuardando archivo limpio...")
 df.to_csv('Database/2processed_data_complete_limpio.csv', index=False)
-print("Archivo limpio guardado en 'Database/2processed_data_complete_limpio.csv'")
+print("Archivo guardado en 'Database/2processed_data_complete_limpio.csv'")
 
 # Verificar el archivo guardado
 print("\nVerificando archivo guardado...")
@@ -71,5 +71,4 @@ print(f"Registros originales: {df.shape[0]:,}")
 print(f"Registros después de limpieza: {df.shape[0]:,}")
 print(f"Registros en archivo guardado: {df_verificacion.shape[0]:,}")
 print(f"Columnas en archivo final: {list(df.columns)}")
-
 print("\n¡Limpieza completada!") 

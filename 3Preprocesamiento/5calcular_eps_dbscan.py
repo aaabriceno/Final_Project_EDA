@@ -178,7 +178,7 @@ plt.title('Distribución Logarítmica')
 plt.grid(True, alpha=0.3)
 
 plt.tight_layout()
-plt.savefig('Preprocesamiento/analisis_eps_dbscan.png', dpi=300, bbox_inches='tight')
+plt.savefig('Preprocesamiento/AnalisisCluster/analisis_eps_dbscan.png', dpi=300, bbox_inches='tight')
 plt.close()
 print("Gráfica guardada: analisis_eps_dbscan.png")
 
@@ -247,7 +247,7 @@ if len(pca_columns) > 0:
     sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', center=0)
     plt.title('Correlación entre Componentes PCA')
     plt.tight_layout()
-    plt.savefig('Preprocesamiento/correlacion_pca_dbscan.png', dpi=300, bbox_inches='tight')
+    plt.savefig('Preprocesamiento/AnalisisCluster/correlacion_pca_dbscan.png', dpi=300, bbox_inches='tight')
     plt.close()
     print("Gráfica de correlación PCA guardada: correlacion_pca_dbscan.png")
 
