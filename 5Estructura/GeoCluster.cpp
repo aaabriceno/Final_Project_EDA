@@ -15,7 +15,7 @@ using namespace std;
 // Configurar precisión global para todos los números de punto flotante
 void configurarPrecision() {
     cout.setf(ios::fixed, ios::floatfield);
-    cout.precision(10);
+    cout.precision(14);
 }
 
 GeoCluster::GeoCluster() {

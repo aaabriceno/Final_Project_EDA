@@ -28,7 +28,7 @@ vector<Punto> leerCSV(const string& archivo) {
 
     // Configurar precisión para los mensajes de debug
     cout.setf(ios::fixed, ios::floatfield);
-    cout.precision(10);
+    cout.precision(14);
 
     string linea;
     int numeroLinea = 0;
@@ -137,11 +137,12 @@ struct PuntoBinario {
     int id;
     double latitud;
     double longitud;
-    double atributos[12];  // Asumiendo 12 atributos como máximo
+    double atributos[10];  // 10 atributos como máximo sin aplicar preprocesamiento o con este
     int num_atributos;
 };
 
 // Función para convertir CSV a binario
+/*
 void convertirCSVaBinario(const string& archivoCSV, const string& archivoBinario) {
     cout << "Convirtiendo " << archivoCSV << " a formato binario..." << endl;
     
@@ -181,6 +182,7 @@ void convertirCSVaBinario(const string& archivoCSV, const string& archivoBinario
     cout << "Conversión completada. Archivo binario: " << archivoBinario << endl;
     cout << "Tamaño original: " << puntos.size() << " puntos" << endl;
 }
+*/
 
 // Función para leer archivo binario
 vector<Punto> leerBinario(const string& archivoBinario) {
@@ -243,7 +245,7 @@ vector<Punto> leerBinario(const string& archivoBinario) {
 int main() {
     // Configurar la precisión para mostrar más decimales
     cout.setf(ios::fixed, ios::floatfield);
-    cout.precision(10);
+    cout.precision(14);
     
     // Crear un objeto de la clase GeoCluster
     GeoCluster geoCluster;
@@ -285,15 +287,15 @@ int main() {
     // Mostrar opciones disponibles
     cout << "Archivos disponibles:" << endl;
     if (existeBinario) {
-        cout << "✓ Archivo binario encontrado: " << archivoBinario << endl;
+        cout << "Archivo binario encontrado: " << archivoBinario << endl;
     } else {
-        cout << "✗ Archivo binario no encontrado" << endl;
+        cout << "Archivo binario no encontrado" << endl;
     }
     
     if (existeCSV) {
-        cout << "✓ Archivo CSV encontrado: " << rutaCSV << endl;
+        cout << "Archivo CSV encontrado: " << rutaCSV << endl;
     } else {
-        cout << "✗ Archivo CSV no encontrado" << endl;
+        cout << "Archivo CSV no encontrado" << endl;
     }
     cout << endl;
     
@@ -345,7 +347,7 @@ int main() {
         case 3: // Convertir CSV a binario y leer
             if (existeCSV) {
                 cout << "Convirtiendo CSV a binario..." << endl;
-                convertirCSVaBinario(rutaCSV, archivoBinario);
+                //convertirCSVaBinario(rutaCSV, archivoBinario);
                 cout << "Leyendo archivo binario recién creado..." << endl;
                 puntos = leerBinario(archivoBinario);
             } else {
@@ -399,6 +401,5 @@ int main() {
     cout << "\nMBR de los  puntos:" << endl;
     cout << "Latitud mínima: " << mbr.m_minp[0] << ", Longitud mínima: " << mbr.m_minp[1] << endl;
     cout << "Latitud máxima: " << mbr.m_maxp[0] << ", Longitud máxima: " << mbr.m_maxp[1] << endl;
-    
     return 0;
 }
