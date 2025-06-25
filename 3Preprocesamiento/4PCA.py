@@ -83,7 +83,7 @@ print(f"Forma final con tripID, lat, long y PCA: {X_final.shape}")
 
 # Convertir a DataFrame
 columnas_pca = [f'PC{i+1}' for i in range(k)]
-df_final = pd.DataFrame(X_final, columns=['tripID', 'lat', 'long'] + columnas_pca)
+df_final = pd.DataFrame(X_final, columns=['tripID', 'pickup_latitude', 'pickup_longitude'] + columnas_pca)
 
 # Verificar que no se perdió ningún tripID
 print(f"\nVerificación de tripIDs:")
