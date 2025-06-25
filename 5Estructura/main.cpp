@@ -141,48 +141,6 @@ struct PuntoBinario {
     int num_atributos;
 };
 
-// Función para convertir CSV a binario
-/*
-void convertirCSVaBinario(const string& archivoCSV, const string& archivoBinario) {
-    cout << "Convirtiendo " << archivoCSV << " a formato binario..." << endl;
-    
-    vector<Punto> puntos = leerCSV(archivoCSV);
-    
-    ofstream archivoBin(archivoBinario, ios::binary);
-    if (!archivoBin.is_open()) {
-        cerr << "Error al crear archivo binario: " << archivoBinario << endl;
-        return;
-    }
-    
-    // Escribir número total de puntos
-    int numPuntos = puntos.size();
-    archivoBin.write(reinterpret_cast<const char*>(&numPuntos), sizeof(int));
-    
-    // Escribir cada punto
-    for (const auto& punto : puntos) {
-        PuntoBinario puntoBin;
-        puntoBin.id = punto.id;
-        puntoBin.latitud = punto.latitud;
-        puntoBin.longitud = punto.longitud;
-        puntoBin.num_atributos = punto.atributos.size();
-        
-        // Copiar atributos
-        for (int i = 0; i < 12; i++) {
-            if (i < punto.atributos.size()) {
-                puntoBin.atributos[i] = punto.atributos[i];
-            } else {
-                puntoBin.atributos[i] = 0.0;
-            }
-        }
-        
-        archivoBin.write(reinterpret_cast<const char*>(&puntoBin), sizeof(PuntoBinario));
-    }
-    
-    archivoBin.close();
-    cout << "Conversión completada. Archivo binario: " << archivoBinario << endl;
-    cout << "Tamaño original: " << puntos.size() << " puntos" << endl;
-}
-*/
 
 // Función para leer archivo binario
 vector<Punto> leerBinario(const string& archivoBinario) {
@@ -250,6 +208,7 @@ int main() {
     // Crear un objeto de la clase GeoCluster
     GeoCluster geoCluster;
 
+    //string currentPath = __FILE__;
     // Configuración de archivos
     string archivoCSV = "C:/Users/anthony/Final_Project_EDA/2Database/puntos10k.csv";
     string archivoBinario = "C:/Users/anthony/Final_Project_EDA/2Database/puntos500k.bin";
