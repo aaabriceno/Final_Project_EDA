@@ -10,11 +10,14 @@
 #include <iostream>
 
 using namespace std;
+//PARAMETROS PARA 10M
+//M = sqrt(10000000)*0.5 = 500
+//m = M*0.4 = 200
 
-// Parámetros optimizados para 500,000 puntos
+// Parámetros para 500,000 puntos
 // Cálculo: sqrt(500,000) * 0.5 = 353
-const int MAX_PUNTOS_POR_NODO = 350; // Máximo de puntos por nodo (reducido para estabilidad)
-const int MIN_PUNTOS_POR_NODO = 140;  // Mínimo de puntos por nodo (40% del máximo)
+const int MAX_PUNTOS_POR_NODO = 500; // Máximo de puntos por nodo (reducido para estabilidad)
+const int MIN_PUNTOS_POR_NODO = 200;  // Mínimo de puntos por nodo (40% del máximo)
 const double PORCENTAJE_PARA_HACER_REINSERT = 0.3; // Para poder hacer reinsert
 
 
@@ -157,7 +160,7 @@ private:
                       double bx1, double by1, double bx2, double by2);
     
     // Funciones auxiliares para verificación
-    void verificarDuplicadosRec(Nodo* nodo, vector<int>& ids);
+    //void verificarDuplicadosRec(Nodo* nodo, vector<int>& ids);
 };
 
 #endif

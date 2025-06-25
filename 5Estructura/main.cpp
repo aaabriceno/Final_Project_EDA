@@ -100,7 +100,7 @@ vector<Punto> leerCSV(const string& archivo) {
 
         // Crear el punto y agregarlo al vector de puntos
         puntos.push_back(Punto(id, lat, lon, atributos));
-            cout << "Punto leído: ID=" << id << ", Lat=" << lat << ", Lon=" << lon << ", Atributos=" << atributos.size() << endl;
+            //cout << "Punto leído: ID=" << id << ", Lat=" << lat << ", Lon=" << lon << ", Atributos=" << atributos.size() << endl;
             
         } catch (const std::invalid_argument& e) {
             cerr << "Error en línea " << numeroLinea << ": No se pudo convertir un valor numérico: " << e.what() << endl;
@@ -252,7 +252,7 @@ int main() {
 
     // Configuración de archivos
     string archivoCSV = "C:/Users/anthony/Final_Project_EDA/2Database/puntos10k.csv";
-    string archivoBinario = "C:/Users/anthony/Final_Project_EDA/2Database/puntos10kk.bin";
+    string archivoBinario = "C:/Users/anthony/Final_Project_EDA/2Database/puntos500k.bin";
     
     vector<Punto> puntos;
     
@@ -268,11 +268,11 @@ int main() {
     // Verificar si existe el archivo CSV
     vector<string> rutasPosibles = {
         archivoCSV,
-        "2Database/puntos10k.csv",
-        "./2Database/puntos10k.csv",
-        "../2Database/puntos10k.csv",
-        "2Database\\puntos10k.csv",
-        "puntos10k.csv"
+        "2Database/puntos500k.csv",
+        "./2Database/puntos500k.csv",
+        "../2Database/puntos500k.csv",
+        "2Database\\puntos500k.csv",
+        "puntos500k.csv"
     };
     
     string rutaCSV = "";
@@ -318,7 +318,7 @@ int main() {
         opcion = 2;
     } else {
         cout << "ERROR: No se encontraron archivos de datos" << endl;
-        cout << "Asegúrate de que existe puntos500k.csv en la carpeta Database/" << endl;
+        cout << "Asegúrate de que exista el archivo en la carpeta 2Database/" << endl;
         return 1;
     }
     
@@ -385,13 +385,13 @@ int main() {
     cout << "=====================================" << endl;
     
     // Verificar duplicados
-    geoCluster.verificarDuplicados();
+    //geoCluster.verificarDuplicados();
     
     int puntosEnArbol = geoCluster.contarPuntosEnArbol();
     cout << "\nTotal de puntos en el árbol: " << puntosEnArbol << " (esperados: " << puntos.size() << ")" << endl;
     
     if (puntosEnArbol != puntos.size()) {
-        cout << "¡ADVERTENCIA! Faltan " << (puntos.size() - puntosEnArbol) << " puntos en el árbol" << endl;
+        cout << "ADVERTENCIA! Faltan " << (puntos.size() - puntosEnArbol) << " puntos en el árbol" << endl;
     }
     
     // Calcular y mostrar el MBR de todos los puntos

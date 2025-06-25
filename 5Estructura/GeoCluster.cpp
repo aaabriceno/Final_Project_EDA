@@ -124,7 +124,7 @@ bool GeoCluster::OverFlowTreatment(Nodo* N, const Punto& punto, int nivel) {
         Nodo* nuevo_nodo = nullptr;
         Split(N, nuevo_nodo);
 
-        // IMPORTANTE: Después del split, necesitamos insertar el punto que causó el overflow
+        // Después del split, necesitamos insertar el punto que causó el overflow
         // Primero, agregar el punto al nodo original si hay espacio
         if (N->puntos.size() < MAX_PUNTOS_POR_NODO) {
             insertIntoLeafNode(N, punto);
@@ -321,7 +321,6 @@ void GeoCluster::Split(Nodo* nodo, Nodo*& nuevo_nodo) {
     updateMBR(nodo);
     updateMBR(nuevo_nodo);
 }
-
 
 bool interseccion_mbr_microcluster(const MicroCluster& mbr1, const MBR& rect) {
     double lat = mbr1.centroId[0];
@@ -635,6 +634,8 @@ void GeoCluster::imprimirArbol(Nodo* nodo, int nivel) {
     }
 }
 
+
+/*
 void GeoCluster::verificarDuplicados() {
     vector<int> ids_encontrados;
     verificarDuplicadosRec(raiz, ids_encontrados);
@@ -664,3 +665,4 @@ void GeoCluster::verificarDuplicadosRec(Nodo* nodo, vector<int>& ids) {
         }
     }
 }
+*/
