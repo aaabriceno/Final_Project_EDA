@@ -3,10 +3,8 @@ import numpy as np
 
 #Analizamos algun tipo de anomalia en los datos, ya sea valores negativ, etc
 
-# Cargar el archivo de datos
 print("ANALIZANDO DATOS PARA IDENTIFICAR VALORES EXTRAÑOS")
-print("=" * 60)
-
+# Cargar el archivo de datos
 try:
     df = pd.read_csv('2Database/1processed_data_complete.csv')
     print(f"Archivo cargado exitosamente: {df.shape[0]} filas, {df.shape[1]} columnas")
@@ -21,7 +19,6 @@ for i, col in enumerate(df.columns):
 
 # Analizar cada columna numérica
 print(f"\nANÁLISIS DETALLADO POR COLUMNA:")
-print("=" * 80)
 
 atributos_tarifa = ['fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount', 'improvement_surcharge']
 
@@ -59,7 +56,6 @@ for columna in df.columns:
 
 # Analizar valores extremos
 print(f"\nANÁLISIS DE VALORES EXTREMOS:")
-print("=" * 60)
 
 for columna in atributos_tarifa:
     if columna in df.columns:
@@ -82,7 +78,6 @@ for columna in atributos_tarifa:
 # Verificar si total_amount coincide con la suma
 if 'total_amount' in df.columns:
     print(f"\nVERIFICACIÓN DE TOTAL_AMOUNT:")
-    print("=" * 60)
     
     # Calcular suma manual
     suma_manual = (
@@ -119,7 +114,6 @@ if 'total_amount' in df.columns:
 
 # Mostrar algunas filas problemáticas
 print(f"\nMUESTRAS DE DATOS PROBLEMÁTICOS:")
-print("=" * 60)
 
 # Filas con valores muy negativos
 for columna in atributos_tarifa:
@@ -136,4 +130,3 @@ for columna in atributos_tarifa:
                         print(f"     {col}: {row[col]:.2f}")
 
 print(f"\nANÁLISIS COMPLETADO")
-print("=" * 60) 
