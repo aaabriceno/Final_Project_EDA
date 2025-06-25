@@ -14,7 +14,7 @@ print("Cargando dataset...")
 df = pd.read_csv('Database/2processed_data_complete_limpio.csv')
 
 print("=== ANÁLISIS DE DISTRIBUCIÓN DE COORDENADAS ===")
-print(f"Dataset shape: {df.shape}")
+print(f"Dataset Tamano: {df.shape}")
 print(f"Columnas: {list(df.columns)}")
 
 # Para datasets grandes, usar una muestra para visualización
@@ -26,16 +26,16 @@ else:
     df_sample = df
 
 # Análisis de coordenadas
-print("\n=== ESTADÍSTICAS DE LATITUD ===")
+print("\nESTADÍSTICAS DE LATITUD")
 print(df['pickup_latitude'].describe())
 print(f"Valores únicos en lat: {df['pickup_latitude'].nunique()}")
 
-print("\n=== ESTADÍSTICAS DE LONGITUD ===")
+print("\nESTADÍSTICAS DE LONGITUD")
 print(df['pickup_longitude'].describe())
 print(f"Valores únicos en long: {df['pickup_longitude'].nunique()}")
 
 # Detectar outliers (0,0) y valores sospechosos
-print("\n=== DETECCIÓN DE OUTLIERS ===")
+print("\nDETECCIÓN DE OUTLIERS")
 ceros_lat = (df['pickup_latitude'] == 0).sum()
 ceros_long = (df['pickup_longitude'] == 0).sum()
 ceros_ambos = ((df['pickup_latitude'] == 0) & (df['pickup_longitude'] == 0)).sum()
@@ -44,7 +44,7 @@ print(f"Puntos con lat = 0: {ceros_lat:,}")
 print(f"Puntos con long = 0: {ceros_long:,}")
 print(f"Puntos con (lat, long) = (0, 0): {ceros_ambos:,}")
 
-# Detectar otros valores sospechosos
+# Detectar otros valores sospechosos o que no estan entre valores de lat y long
 print(f"\nPuntos con lat < -90 o lat > 90: {((df['pickup_latitude'] < -90) | (df['pickup_latitude'] > 90)).sum():,}")
 print(f"Puntos con long < -180 o long > 180: {((df['pickup_longitude'] < -180) | (df['pickup_longitude'] > 180)).sum():,}")
 
@@ -57,19 +57,19 @@ print(f"\nPuntos válidos (sin outliers): {len(df_clean):,}")
 print(f"Porcentaje de datos válidos: {len(df_clean)/len(df)*100:.2f}%")
 
 if len(df_clean) > 0:
-    print("\n=== ESTADÍSTICAS SIN OUTLIERS ===")
+    print("\nESTADÍSTICAS SIN OUTLIERS")
     print("Latitud:")
     print(df_clean['pickup_latitude'].describe())
     print("\nLongitud:")
     print(df_clean['pickup_longitude'].describe())
 
 # Configurar matplotlib para mejor rendimiento
-plt.rcParams['figure.dpi'] = 100
+plt.rcParams['figure.dpi'] = 250
 plt.rcParams['savefig.dpi'] = 300
 
 # IMAGEN 1: Distribución de latitud y longitud
 print("\nGenerando imagen 1: Distribución de lat/long...")
-plt.figure(figsize=(12, 5))
+plt.figure(figsize=(12, 8))
 
 # Distribución de latitud
 plt.subplot(1, 2, 1)
@@ -104,7 +104,7 @@ plt.xlabel('Longitud', fontsize=14)
 plt.ylabel('Latitud', fontsize=14)
 plt.grid(True, alpha=0.3)
 
-# Agregar líneas de referencia para NYC
+#Líneas de referencia para NYC
 plt.axhline(y=40.7128, color='red', linestyle='--', alpha=0.7, label='NYC Lat (40.7128°)')
 plt.axvline(x=-74.0060, color='red', linestyle='--', alpha=0.7, label='NYC Long (-74.0060°)')
 plt.legend()
@@ -143,8 +143,8 @@ if len(df_clean) > 0:
     plt.figure(figsize=(12, 8))
     
     # Usar muestra para scatter plot sin outliers
-    if len(df_clean) > 50000:
-        df_clean_sample = df_clean.sample(n=50000, random_state=42)
+    if len(df_clean) > 100000:
+        df_clean_sample = df_clean.sample(n=100000, random_state=42)
     else:
         df_clean_sample = df_clean
     
