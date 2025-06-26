@@ -141,7 +141,6 @@ struct PuntoBinario {
     int num_atributos;
 };
 
-
 // Función para leer archivo binario
 vector<Punto> leerBinario(const string& archivoBinario) {
     vector<Punto> puntos;
