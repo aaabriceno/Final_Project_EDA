@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
 
+# Configurar pandas para mantener alta precisión
+pd.set_option('display.float_format', '{:.13f}'.format)
+pd.set_option('display.precision', 13)
+
 #Analizamos algun tipo de anomalia en los datos, ya sea valores negativ, etc
 
 print("ANALIZANDO DATOS PARA IDENTIFICAR VALORES EXTRAÑOS")
@@ -21,16 +25,26 @@ for i, col in enumerate(df.columns):
 print(f"\nANÁLISIS DETALLADO POR COLUMNA:")
 
 atributos_tarifa = ['fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount', 'improvement_surcharge']
+coordenadas = ['pickup_latitude', 'pickup_longitude']
 
 for columna in df.columns:
     if df[columna].dtype in ['int64', 'float64']:
         print(f"\n{columna.upper()}:")
         print(f"   Tipo: {df[columna].dtype}")
-        print(f"   Min: {df[columna].min():.6f}")
-        print(f"   Max: {df[columna].max():.6f}")
-        print(f"   Media: {df[columna].mean():.6f}")
-        print(f"   Mediana: {df[columna].median():.6f}")
-        print(f"   Desv. Est.: {df[columna].std():.6f}")
+        
+        # Determinar formato según el tipo de dato
+        if columna in coordenadas:
+            # Coordenadas geográficas: 13 decimales
+            formato = '.13f'
+        else:
+            # Atributos monetarios: 2 decimales
+            formato = '.2f'
+        
+        print(f"   Min: {df[columna].min():{formato}}")
+        print(f"   Max: {df[columna].max():{formato}}")
+        print(f"   Media: {df[columna].mean():{formato}}")
+        print(f"   Mediana: {df[columna].median():{formato}}")
+        print(f"   Desv. Est.: {df[columna].std():{formato}}")
         
         # Contar valores negativos
         negativos = (df[columna] < 0).sum()
@@ -41,7 +55,7 @@ for columna in df.columns:
             valores_neg = df[df[columna] < 0][columna]
             print(f"   Ejemplos de valores negativos:")
             for i, valor in enumerate(valores_neg.head(5)):
-                print(f"     {valor:.6f}")
+                print(f"     {valor:{formato}}")
             if len(valores_neg) > 5:
                 print(f"     ... y {len(valores_neg)-5} más")
         
@@ -66,14 +80,14 @@ for columna in atributos_tarifa:
         if len(valores_neg) > 0:
             print(f"   Valores más negativos:")
             for valor in valores_neg.head(3):
-                print(f"     {valor:.6f}")
+                print(f"     {valor:.2f}")
         
         # Valores más positivos
         valores_pos = df[df[columna] > 0][columna].sort_values(ascending=False)
         if len(valores_pos) > 0:
             print(f"   Valores más positivos:")
             for valor in valores_pos.head(3):
-                print(f"     {valor:.6f}")
+                print(f"     {valor:.2f}")
 
 # Verificar si total_amount coincide con la suma
 if 'total_amount' in df.columns:
@@ -90,8 +104,8 @@ if 'total_amount' in df.columns:
     max_diferencia = diferencia.max()
     media_diferencia = diferencia.mean()
     
-    print(f"   Diferencia máxima: {max_diferencia:.6f}")
-    print(f"   Diferencia media: {media_diferencia:.6f}")
+    print(f"   Diferencia máxima: {max_diferencia:.2f}")
+    print(f"   Diferencia media: {media_diferencia:.2f}")
     
     if max_diferencia > 0.01:  # Tolerancia de 1 centavo
         print(f"ADVERTENCIA: Hay diferencias significativas entre total_amount y la suma")
