@@ -505,6 +505,7 @@ void GeoCluster::updateMBR(Nodo* nodo) {
     }
 }
 
+/*
 double GeoCluster::computeArea(double ax1, double ay1, double ax2, double ay2,
                               double bx1, double by1, double bx2, double by2) {
     double interseccion_minLat = max(ax1, bx1);
@@ -519,6 +520,8 @@ double GeoCluster::computeArea(double ax1, double ay1, double ax2, double ay2,
     return (interseccion_maxLat - interseccion_minLat) * (interseccion_maxLon - interseccion_minLon);
 }
 
+
+
 MBR GeoCluster::computeMBR(double ax1, double ay1, double ax2, double ay2,
                           double bx1, double by1, double bx2, double by2){
     double interseccion_minLat = max(ax1, bx1);
@@ -532,6 +535,7 @@ MBR GeoCluster::computeMBR(double ax1, double ay1, double ax2, double ay2,
 
     return MBR(interseccion_minLat, interseccion_minLon, interseccion_maxLat, interseccion_maxLon);
 }
+*/
 
 bool GeoCluster::estaDentroDelMBR(const Punto& punto, const MBR& mbr) {
     bool dentroLatitud = (punto.latitud >= mbr.m_minp[0] && punto.latitud <= mbr.m_maxp[0]);
@@ -666,3 +670,234 @@ void GeoCluster::verificarDuplicadosRec(Nodo* nodo, vector<int>& ids) {
     }
 }
 */
+
+// ============================================================================
+// FUNCIONES DE CONSULTA PRINCIPALES
+// ============================================================================
+
+vector<Punto> GeoCluster::n_puntos_similiares_a_punto(const Punto& punto_de_busqueda, MBR& rango, int numero_de_puntos_similares) {
+    cout << "\n🔍 CONSULTA 1: Buscando " << numero_de_puntos_similares << " puntos más similares a punto " << punto_de_busqueda.id << endl;
+    cout << "Rango de búsqueda: (" << rango.m_minp[0] << "," << rango.m_minp[1] << ") a (" 
+         << rango.m_maxp[0] << "," << rango.m_maxp[1] << ")" << endl;
+    
+    vector<Punto> puntos_en_rango;
+    searchRec(rango, raiz, puntos_en_rango);
+    
+    cout << "Puntos encontrados en rango: " << puntos_en_rango.size() << endl;
+    
+    if (puntos_en_rango.empty()) {
+        cout << "No se encontraron puntos en el rango especificado" << endl;
+        return {};
+    }
+    
+    // Calcular similitud basada en atributos PCA
+    vector<pair<double, Punto>> puntos_con_similitud;
+    
+    for (const auto& punto : puntos_en_rango) {
+        double similitud = calcularSimilitudAtributos(punto_de_busqueda, punto);
+        puntos_con_similitud.push_back({similitud, punto});
+    }
+    
+    // Ordenar por similitud (mayor similitud primero)
+    sort(puntos_con_similitud.begin(), puntos_con_similitud.end(), 
+         [](const pair<double, Punto>& a, const pair<double, Punto>& b) {
+             return a.first > b.first;
+         });
+    
+    // Tomar los N puntos más similares
+    vector<Punto> puntos_similares;
+    int n_tomar = min(numero_de_puntos_similares, (int)puntos_con_similitud.size());
+    
+    for (int i = 0; i < n_tomar; i++) {
+        puntos_similares.push_back(puntos_con_similitud[i].second);
+        cout << "  Punto " << puntos_con_similitud[i].second.id 
+             << " - Similitud: " << puntos_con_similitud[i].first << endl;
+    }
+    
+    cout << "✅ Consulta completada. Retornando " << puntos_similares.size() << " puntos más similares" << endl;
+    return puntos_similares;
+}
+
+vector<vector<Punto>> GeoCluster::grupos_similares_de_puntos(MBR& rango) {
+    cout << "\n🔍 CONSULTA 2: Buscando grupos de puntos similares en rango" << endl;
+    cout << "Rango de búsqueda: (" << rango.m_minp[0] << "," << rango.m_minp[1] << ") a (" 
+         << rango.m_maxp[0] << "," << rango.m_maxp[1] << ")" << endl;
+    
+    vector<Punto> puntos_en_rango;
+    searchRec(rango, raiz, puntos_en_rango);
+    
+    cout << "Puntos encontrados en rango: " << puntos_en_rango.size() << endl;
+    
+    if (puntos_en_rango.empty()) {
+        cout << "No se encontraron puntos en el rango especificado" << endl;
+        return {};
+    }
+    
+    // Agrupar por subcluster atributivo (ya están pre-clusterizados)
+    unordered_map<int, vector<Punto>> grupos_por_subcluster;
+    
+    for (const auto& punto : puntos_en_rango) {
+        grupos_por_subcluster[punto.id_subcluster_atributivo].push_back(punto);
+    }
+    
+    // Convertir a vector de vectores
+    vector<vector<Punto>> grupos_similares;
+    for (const auto& par : grupos_por_subcluster) {
+        if (par.second.size() >= 2) {  // Solo grupos con al menos 2 puntos
+            grupos_similares.push_back(par.second);
+            cout << "  Grupo " << par.first << ": " << par.second.size() << " puntos" << endl;
+        }
+    }
+    
+    // Ordenar grupos por tamaño (mayor primero)
+    sort(grupos_similares.begin(), grupos_similares.end(),
+         [](const vector<Punto>& a, const vector<Punto>& b) {
+             return a.size() > b.size();
+         });
+    
+    cout << "✅ Consulta completada. Encontrados " << grupos_similares.size() << " grupos de puntos similares" << endl;
+    return grupos_similares;
+}
+
+// ============================================================================
+// FUNCIONES AUXILIARES PARA CONSULTAS
+// ============================================================================
+
+double GeoCluster::calcularSimilitudAtributos(const Punto& p1, const Punto& p2) {
+    // Calcular similitud basada en atributos PCA usando distancia euclidiana
+    double similitud = 0.0;
+    
+    // Usar solo los primeros 8 componentes PCA (si están disponibles)
+    int num_atributos = min(8, (int)min(p1.atributos.size(), p2.atributos.size()));
+    
+    for (int i = 0; i < num_atributos; i++) {
+        double diff = p1.atributos[i] - p2.atributos[i];
+        similitud += diff * diff;
+    }
+    
+    // Convertir distancia a similitud (1 / (1 + distancia))
+    return 1.0 / (1.0 + sqrt(similitud));
+}
+
+// ============================================================================
+// FUNCIONES PARA MICROCLUSTERS
+// ============================================================================
+
+void GeoCluster::crearMicroclustersEnHojas() {
+    cout << "\n🔬 Creando microclusters en hojas del R*-Tree..." << endl;
+    crearMicroclustersRec(raiz);
+    cout << "✅ Microclusters creados en todas las hojas" << endl;
+}
+
+void GeoCluster::crearMicroclustersRec(Nodo* nodo) {
+    if (nodo == nullptr) return;
+    
+    if (nodo->esHoja) {
+        // Crear microclusters basados en subclusters atributivos
+        crearMicroclustersEnNodoHoja(nodo);
+    } else {
+        // Recursión para nodos internos
+        for (Nodo* hijo : nodo->hijos) {
+            crearMicroclustersRec(hijo);
+        }
+    }
+}
+
+void GeoCluster::crearMicroclustersEnNodoHoja(Nodo* nodo_hoja) {
+    if (nodo_hoja->puntos.empty()) return;
+    
+    // Agrupar puntos por subcluster atributivo
+    unordered_map<int, vector<Punto>> puntos_por_subcluster;
+    
+    for (const auto& punto : nodo_hoja->puntos) {
+        puntos_por_subcluster[punto.id_subcluster_atributivo].push_back(punto);
+    }
+    
+    // Crear microclusters para cada subcluster
+    for (const auto& par : puntos_por_subcluster) {
+        int id_subcluster = par.first;
+        const vector<Punto>& puntos_grupo = par.second;
+        
+        if (puntos_grupo.size() < 2) continue;  // Microclusters con al menos 2 puntos
+        
+        // Calcular centro del microcluster
+        vector<double> centro_atributos;
+        if (!puntos_grupo.empty() && !puntos_grupo[0].atributos.empty()) {
+            int num_atributos = puntos_grupo[0].atributos.size();
+            centro_atributos.resize(num_atributos, 0.0);
+            
+            for (const auto& punto : puntos_grupo) {
+                for (int i = 0; i < num_atributos; i++) {
+                    centro_atributos[i] += punto.atributos[i];
+                }
+            }
+            
+            // Promedio
+            for (int i = 0; i < num_atributos; i++) {
+                centro_atributos[i] /= puntos_grupo.size();
+            }
+        }
+        
+        // Calcular radio del microcluster
+        double radio = 0.0;
+        for (const auto& punto : puntos_grupo) {
+            double dist = calcularDistanciaAtributos(centro_atributos, punto.atributos);
+            radio = max(radio, dist);
+        }
+        
+        // Crear microcluster
+        MicroCluster microcluster(centro_atributos, radio, id_subcluster);
+        microcluster.puntos = puntos_grupo;
+        
+        nodo_hoja->microclusters_en_Hoja.push_back(microcluster);
+    }
+    
+    cout << "  Nodo hoja: " << nodo_hoja->microclusters_en_Hoja.size() 
+         << " microclusters creados de " << nodo_hoja->puntos.size() << " puntos" << endl;
+}
+
+double GeoCluster::calcularDistanciaAtributos(const vector<double>& centro, const vector<double>& atributos) {
+    double distancia = 0.0;
+    int num_atributos = min(centro.size(), atributos.size());
+    
+    for (int i = 0; i < num_atributos; i++) {
+        double diff = centro[i] - atributos[i];
+        distancia += diff * diff;
+    }
+    
+    return sqrt(distancia);
+}
+
+// ============================================================================
+// FUNCIONES DE VERIFICACIÓN Y DEBUG
+// ============================================================================
+
+void GeoCluster::verificarDuplicados() {
+    vector<int> ids_encontrados;
+    verificarDuplicadosRec(raiz, ids_encontrados);
+    
+    cout << "\n=== VERIFICACIÓN DE DUPLICADOS ===" << endl;
+    cout << "Total de IDs únicos encontrados: " << ids_encontrados.size() << endl;
+    
+    // Ordenar y verificar duplicados
+    sort(ids_encontrados.begin(), ids_encontrados.end());
+    for (size_t i = 1; i < ids_encontrados.size(); i++) {
+        if (ids_encontrados[i] == ids_encontrados[i-1]) {
+            cout << "¡DUPLICADO ENCONTRADO! ID: " << ids_encontrados[i] << endl;
+        }
+    }
+}
+
+void GeoCluster::verificarDuplicadosRec(Nodo* nodo, vector<int>& ids) {
+    if (nodo == nullptr) return;
+    
+    if (nodo->esHoja) {
+        for (const auto& punto : nodo->puntos) {
+            ids.push_back(punto.id);
+        }
+    } else {
+        for (Nodo* hijo : nodo->hijos) {
+            verificarDuplicadosRec(hijo, ids);
+        }
+    }
+}

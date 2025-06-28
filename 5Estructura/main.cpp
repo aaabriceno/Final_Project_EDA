@@ -201,13 +201,13 @@ vector<Punto> leerBinario(const string& archivoBinario) {
 
 int main() {
     // Configurar la precisión para mostrar más decimales
+    /*
     cout.setf(ios::fixed, ios::floatfield);
     cout.precision(14);
-    
+    */
     // Crear un objeto de la clase GeoCluster
     GeoCluster geoCluster;
 
-    //string currentPath = __FILE__;
     // Configuración de archivos
     string archivoCSV = "C:/Users/anthony/Final_Project_EDA/2Database/puntos10k.csv";
     string archivoBinario = "C:/Users/anthony/Final_Project_EDA/2Database/puntos500k.bin";
@@ -258,51 +258,34 @@ int main() {
     cout << endl;
     
     // Menú de opciones
-    int opcion = 0;
-    if (existeBinario && existeCSV) {
-        cout << "Opciones disponibles:" << endl;
-        cout << "1. Leer archivo binario (más rápido)" << endl;
-        cout << "2. Leer archivo CSV directamente" << endl;
-        cout << "3. Convertir CSV a binario y luego leer binario" << endl;
-        cout << "4. Salir" << endl;
-        cout << endl;
-        cout << "Selecciona una opción (1-4): ";
-        cin >> opcion;
-    } else if (existeBinario) {
-        cout << "Solo archivo binario disponible. Leyendo binario..." << endl;
-        opcion = 1;
-    } else if (existeCSV) {
-        cout << "Solo archivo CSV disponible. Leyendo CSV..." << endl;
-        opcion = 2;
-    } else {
-        cout << "ERROR: No se encontraron archivos de datos" << endl;
-        cout << "Asegúrate de que exista el archivo en la carpeta 2Database/" << endl;
-        return 1;
-    }
+    menu_principal:
+    cout << "=== MENÚ PRINCIPAL ===" << endl;
+    cout << "1. Cargar datos desde archivo binario" << endl;
+    cout << "2. Cargar datos desde archivo CSV" << endl;
+    cout << "3. Insertar puntos en R*-Tree" << endl;
+    cout << "4. Crear microclusters en hojas" << endl;
+    cout << "5. Consulta 1: N puntos más similares a un punto en rango" << endl;
+    cout << "6. Consulta 2: Grupos de puntos similares en rango" << endl;
+    cout << "7. Mostrar información del árbol" << endl;
+    cout << "8. Verificar duplicados" << endl;
+    cout << "9. Salir" << endl;
+    cout << endl;
     
-    // Procesar la opción seleccionada
+    int opcion;
+    cout << "Selecciona una opción: ";
+    cin >> opcion;
+    
     switch (opcion) {
-        case 1: // Leer binario
+        case 1:
             if (existeBinario) {
                 cout << "Leyendo archivo binario..." << endl;
                 puntos = leerBinario(archivoBinario);
             } else {
                 cout << "ERROR: Archivo binario no encontrado" << endl;
-                return 1;
             }
             break;
             
-        case 2: // Leer CSV directamente
-            if (existeCSV) {
-                cout << "Leyendo archivo CSV directamente..." << endl;
-                puntos = leerCSV(rutaCSV);
-            } else {
-                cout << "ERROR: Archivo CSV no encontrado" << endl;
-                return 1;
-            }
-            break;
-            
-        case 3: // Convertir CSV a binario y leer
+        case 2:
             if (existeCSV) {
                 cout << "Convirtiendo CSV a binario..." << endl;
                 //convertirCSVaBinario(rutaCSV, archivoBinario);
@@ -310,54 +293,154 @@ int main() {
                 puntos = leerBinario(archivoBinario);
             } else {
                 cout << "ERROR: Archivo CSV no encontrado para conversión" << endl;
-                return 1;
             }
             break;
             
-        case 4: // Salir
-            cout << "Saliendo..." << endl;
+        case 3:
+            if (puntos.empty()) {
+                cout << "ERROR: No hay datos cargados. Carga datos primero (opción 1 o 2)" << endl;
+            } else {
+                cout << "Insertando " << puntos.size() << " puntos en R*-Tree..." << endl;
+                for (const auto& punto : puntos) {
+                    geoCluster.inserData(punto);
+                }
+                cout << "✅ Inserción completada" << endl;
+            }
+            break;
+            
+        case 4:
+            cout << "Creando microclusters en hojas del R*-Tree..." << endl;
+            geoCluster.crearMicroclustersEnHojas();
+            break;
+            
+        case 5: {
+            if (puntos.empty()) {
+                cout << "ERROR: No hay datos cargados" << endl;
+                break;
+            }
+            
+            cout << "\n=== CONSULTA 1: N PUNTOS MÁS SIMILARES ===" << endl;
+            
+            // Seleccionar punto de búsqueda
+            int id_punto_busqueda;
+            cout << "Ingresa el ID del punto de búsqueda: ";
+            cin >> id_punto_busqueda;
+            
+            // Buscar el punto en los datos
+            Punto punto_busqueda;
+            bool encontrado = false;
+            for (const auto& p : puntos) {
+                if (p.id == id_punto_busqueda) {
+                    punto_busqueda = p;
+                    encontrado = true;
+                    break;
+                }
+            }
+            
+            if (!encontrado) {
+                cout << "ERROR: Punto con ID " << id_punto_busqueda << " no encontrado" << endl;
+                break;
+            }
+            
+            // Definir rango de búsqueda
+            double lat_min, lat_max, lon_min, lon_max;
+            cout << "Ingresa rango de búsqueda:" << endl;
+            cout << "Latitud mínima: ";
+            cin >> lat_min;
+            cout << "Latitud máxima: ";
+            cin >> lat_max;
+            cout << "Longitud mínima: ";
+            cin >> lon_min;
+            cout << "Longitud máxima: ";
+            cin >> lon_max;
+            
+            MBR rango_busqueda(lat_min, lon_min, lat_max, lon_max);
+            
+            // Número de puntos similares
+            int n_puntos;
+            cout << "Número de puntos similares a buscar: ";
+            cin >> n_puntos;
+            
+            // Ejecutar consulta
+            vector<Punto> puntos_similares = geoCluster.n_puntos_similiares_a_punto(
+                punto_busqueda, rango_busqueda, n_puntos);
+            
+            cout << "\n=== RESULTADOS ===" << endl;
+            cout << "Punto de búsqueda: ID=" << punto_busqueda.id 
+                 << " Lat=" << punto_busqueda.latitud 
+                 << " Lon=" << punto_busqueda.longitud << endl;
+            cout << "Puntos similares encontrados: " << puntos_similares.size() << endl;
+            break;
+        }
+        
+        case 6: {
+            if (puntos.empty()) {
+                cout << "ERROR: No hay datos cargados" << endl;
+                break;
+            }
+            
+            cout << "\n=== CONSULTA 2: GRUPOS DE PUNTOS SIMILARES ===" << endl;
+            
+            // Definir rango de búsqueda
+            double lat_min, lat_max, lon_min, lon_max;
+            cout << "Ingresa rango de búsqueda:" << endl;
+            cout << "Latitud mínima: ";
+            cin >> lat_min;
+            cout << "Latitud máxima: ";
+            cin >> lat_max;
+            cout << "Longitud mínima: ";
+            cin >> lon_min;
+            cout << "Longitud máxima: ";
+            cin >> lon_max;
+            
+            MBR rango_busqueda(lat_min, lon_min, lat_max, lon_max);
+            
+            // Ejecutar consulta
+            vector<vector<Punto>> grupos_similares = geoCluster.grupos_similares_de_puntos(rango_busqueda);
+            
+            cout << "\n=== RESULTADOS ===" << endl;
+            cout << "Grupos de puntos similares encontrados: " << grupos_similares.size() << endl;
+            
+            for (size_t i = 0; i < grupos_similares.size(); i++) {
+                cout << "Grupo " << i + 1 << ": " << grupos_similares[i].size() << " puntos" << endl;
+                if (i < 3) {  // Mostrar solo los primeros 3 grupos
+                    for (const auto& punto : grupos_similares[i]) {
+                        cout << "  - ID: " << punto.id << " (Lat: " << punto.latitud 
+                             << ", Lon: " << punto.longitud << ")" << endl;
+                    }
+                }
+            }
+            break;
+        }
+        
+        case 7:
+            cout << "\n=== INFORMACIÓN DEL R*-TREE ===" << endl;
+            cout << "Total de puntos en el árbol: " << geoCluster.contarPuntosEnArbol() << endl;
+            cout << "\nEstructura del árbol:" << endl;
+            geoCluster.imprimirArbol();
+            break;
+            
+        case 8:
+            cout << "\n=== VERIFICACIÓN DE DUPLICADOS ===" << endl;
+            geoCluster.verificarDuplicados();
+            break;
+            
+        case 9:
+            cout << "¡Hasta luego!" << endl;
             return 0;
             
         default:
-            cout << "Opción inválida. Saliendo..." << endl;
-            return 1;
+            cout << "Opción no válida" << endl;
+            break;
     }
     
-    if (puntos.empty()) {
-        cerr << "ERROR: No se pudieron leer puntos del archivo" << endl;
-        return 1;
-    }
+    cout << endl;
+    cout << "Presiona Enter para continuar...";
+    cin.ignore();
+    cin.get();
     
-    cout << "\n=== INSERCION DE PUNTOS ===" << endl;
-    for (const auto& punto : puntos) {
-        geoCluster.inserData(punto);
-        cout << "Insertando punto " << punto.id << ": (" << punto.latitud << ", " << punto.longitud << ")" << endl;
-        
-        // Verificar puntos en el árbol después de cada inserción
-        int puntosActuales = geoCluster.contarPuntosEnArbol();
-        cout << "  Puntos en árbol después de insertar " << punto.id << ": " << puntosActuales << endl;
-    }
+    // Limpiar pantalla (Windows)
+    system("cls");
     
-    cout << "\n=== ESTRUCTURA DEL GEOCLUSTER-TREE ===" << endl;
-    geoCluster.imprimirArbol();
-    cout << "=====================================" << endl;
-    
-    // Verificar duplicados
-    //geoCluster.verificarDuplicados();
-    
-    int puntosEnArbol = geoCluster.contarPuntosEnArbol();
-    cout << "\nTotal de puntos en el árbol: " << puntosEnArbol << " (esperados: " << puntos.size() << ")" << endl;
-    
-    if (puntosEnArbol != puntos.size()) {
-        cout << "ADVERTENCIA! Faltan " << (puntos.size() - puntosEnArbol) << " puntos en el árbol" << endl;
-    }
-    
-    // Calcular y mostrar el MBR de todos los puntos
-    MBR mbr = geoCluster.calcularMBR(puntos);
-    
-    // Imprimir el MBR
-    cout << "\nMBR de los  puntos:" << endl;
-    cout << "Latitud mínima: " << mbr.m_minp[0] << ", Longitud mínima: " << mbr.m_minp[1] << endl;
-    cout << "Latitud máxima: " << mbr.m_maxp[0] << ", Longitud máxima: " << mbr.m_maxp[1] << endl;
-    return 0;
+    goto menu_principal;
 }
