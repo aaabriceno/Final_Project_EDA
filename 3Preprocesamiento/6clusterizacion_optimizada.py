@@ -38,7 +38,7 @@ def ordenar_y_clustering_espacial(coords, n_clusters=100, batch_size=10000):
     print(f"  Batch size: {batch_size}")
     
     # Paso 1: Ordenar puntos por latitud y longitud
-    print("  Ordenando puntos por coordenadas...")
+    print(" Ordenando puntos por coordenadas...")
     
     # Crear índices ordenados (más eficiente que ordenar todo el array)
     lat_sorted_idx = np.argsort(coords[:, 0])  # Ordenar por latitud
