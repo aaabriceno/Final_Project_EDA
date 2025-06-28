@@ -119,6 +119,9 @@ public:
     vector<Punto> n_puntos_similiares_a_punto(const Punto& punto_de_busqueda, MBR& rango, int numero_de_puntos_similares);
     vector<vector<Punto>> grupos_similares_de_puntos(MBR& rango);
     
+    // FUNCIONES PARA MICROCLUSTERS
+    void crearMicroclustersEnHojas();
+    
     vector<Punto> buscarPuntosDentroInterseccion(const MBR& rango, Nodo* nodo);
     MBR calcularMBR(const vector<Punto>& puntos);
     void imprimirArbol(Nodo* nodo = nullptr, int nivel = 0);
@@ -161,6 +164,17 @@ private:
     
     // Funciones auxiliares para verificación
     //void verificarDuplicadosRec(Nodo* nodo, vector<int>& ids);
+    
+    // FUNCIONES AUXILIARES PARA CONSULTAS
+    double calcularSimilitudAtributos(const Punto& p1, const Punto& p2);
+    
+    // FUNCIONES AUXILIARES PARA MICROCLUSTERS
+    void crearMicroclustersRec(Nodo* nodo);
+    void crearMicroclustersEnNodoHoja(Nodo* nodo_hoja);
+    double calcularDistanciaAtributos(const vector<double>& centro, const vector<double>& atributos);
+    
+    // FUNCIONES DE VERIFICACIÓN Y DEBUG
+    void verificarDuplicadosRec(Nodo* nodo, vector<int>& ids);
 };
 
 #endif
