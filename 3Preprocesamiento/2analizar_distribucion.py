@@ -205,18 +205,4 @@ if len(pca_columns) > 0:
 else:
     print("No se encontraron componentes PCA en el archivo limpio.")
 
-print("\n=== RECOMENDACIONES PARA CLUSTERING ===")
-print("1. FASE 1 - Clustering Espacial:")
-print("   - Usar DBSCAN para detectar clusters naturales")
-print("   - Filtrar outliers (0,0) antes del clustering")
-print("   - Considerar K-means si los clusters son bien definidos")
-
-print("\n2. FASE 2 - Clustering por Atributos:")
-print("   - Aplicar K-means a las componentes PCA dentro de cada cluster espacial")
-print("   - Usar número de clusters proporcional al tamaño del cluster espacial")
-
-print("\n3. ESTRATEGIA RECOMENDADA:")
-print("   - DBSCAN para clustering espacial (maneja outliers automáticamente)")
-print("   - K-means para clustering de atributos (más control sobre número de clusters)")
-
 print("\n¡Análisis completado! Todas las imágenes han sido generadas.") 
