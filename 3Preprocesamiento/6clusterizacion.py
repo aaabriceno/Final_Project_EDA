@@ -9,14 +9,23 @@ import gc
 import warnings
 warnings.filterwarnings('ignore')
 
+# Configurar pandas para mantener alta precisión
+pd.set_option('display.float_format', '{:.14f}'.format)
+pd.set_option('display.precision', 13)
+
 print("=== APLICACIÓN COMPLETA DE DBSCAN ===")
 
 # Cargar datos PCA
 print("Cargando datos PCA...")
-df = pd.read_csv('2Database/3pca_data_set_complete.csv')
-
-print(f"Dataset PCA shape: {df.shape}")
-print(f"Columnas: {list(df.columns)}")
+try:
+    df = pd.read_csv('2Database/3pca_data_set_complete.csv')
+    print(f"Dataset PCA shape: {df.shape}")
+    print(f"Columnas: {list(df.columns)}")
+except FileNotFoundError:
+    print("Archivo PCA no encontrado, intentando con datos procesados...")
+    df = pd.read_csv('2Database/processed_data_complete.csv')
+    print(f"Dataset procesado shape: {df.shape}")
+    print(f"Columnas: {list(df.columns)}")
 
 # PASO 1: Calcular eps usando muestra
 print("\n=== PASO 1: CALCULANDO EPS ===")
@@ -216,8 +225,8 @@ for i, cluster_id in enumerate(sorted(set(labels_final))):
                    label=f'Cluster {cluster_id} ({len(cluster_points):,})')
 
 plt.title(f'Clusters DBSCAN - {n_clusters} clusters, {n_noise:,} puntos de ruido', fontsize=16, fontweight='bold')
-plt.xlabel('Longitud', fontsize=14)
-plt.ylabel('Latitud', fontsize=14)
+plt.xlabel('Longitud', fontsize=13)
+plt.ylabel('Latitud', fontsize=13)
 plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.grid(True, alpha=0.3)
 
@@ -245,8 +254,8 @@ for cluster_id in sorted(df_clusters_viz['cluster_label'].unique()):
                label=f'Cluster {cluster_id} ({len(cluster_points):,})')
 
 plt.title(f'Clusters Principales DBSCAN - {n_clusters} clusters', fontsize=16, fontweight='bold')
-plt.xlabel('Longitud', fontsize=14)
-plt.ylabel('Latitud', fontsize=14)
+plt.xlabel('Longitud', fontsize=13)
+plt.ylabel('Latitud', fontsize=13)
 plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.grid(True, alpha=0.3)
 

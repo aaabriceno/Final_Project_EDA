@@ -6,6 +6,10 @@ from sklearn.cluster import DBSCAN
 from scipy.spatial.distance import pdist, squareform
 import seaborn as sns
 
+# Configurar pandas para mantener alta precisión
+pd.set_option('display.float_format', '{:.14f}'.format)
+pd.set_option('display.precision', 13)
+
 print("=== CÁLCULO AUTOMÁTICO DE EPS PARA DBSCAN (DATOS PCA) ===")
 
 # Cargar datos PCA
