@@ -201,10 +201,9 @@ vector<Punto> leerBinario(const string& archivoBinario) {
 
 int main() {
     // Configurar la precisión para mostrar más decimales
-    /*
     cout.setf(ios::fixed, ios::floatfield);
     cout.precision(14);
-    */
+    
     // Crear un objeto de la clase GeoCluster
     GeoCluster geoCluster;
 
