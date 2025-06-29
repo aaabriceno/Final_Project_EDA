@@ -16,13 +16,16 @@ print(f"Registros originales: {df.shape[0]:,}")
 # Verificar columnas existentes
 print(f"\nColumnas disponibles: {list(df.columns)}")
 
+# PASO 1: CORREGIR DATOS NEGATIVOS EN ATRIBUTOS
+print(f"\n=== PASO 1: CORRECCIÓN DE DATOS NEGATIVOS ===")
+
 # Lista de atributos para PCA (todos los numéricos excepto total_amount)
 atributos_para_pca = [
     'passenger_count', 'trip_distance', 'payment_type',
     'fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount', 'improvement_surcharge'
 ]
 
-print(f"\nAtributos que se usarán para PCA: {atributos_para_pca}")
+print(f"Atributos que se usarán para PCA: {atributos_para_pca}")
 
 # Verificar que no hay valores que no son numeros en los atributos de PCA
 print(f"Valores No Numeros en atributos PCA: {df[atributos_para_pca].isnull().sum().sum()}")
@@ -53,29 +56,102 @@ df['total_amount'] = (
     df['tip_amount'] + df['tolls_amount'] + df['improvement_surcharge']
 ).round(2)
 
-# Verificar que no se perdieron registros después de la limpieza
-print(f"\nRegistros después de la limpieza: {df.shape[0]:,}")
-print(f"¿Se mantuvieron todos los registros? {df.shape[0] == df.shape[0]}")
+print("Datos negativos corregidos")
+
+
+
+# PASO 2: FILTRADO POR RANGO NYC 
+print(f"\n=== PASO 2: FILTRADO POR RANGO NYC  ===")
+
+# Definir límites amplios para toda la región metropolitana de NYC
+NYC_METRO = {
+    'min_lat': 39.0,    # Límite sur amplio (incluye NJ, Long Island)
+    'max_lat': 42.0,    # Límite norte amplio (incluye Connecticut, Upstate NY)
+    'min_long': -75.0,  # Límite oeste amplio (incluye Pennsylvania)
+    'max_long': -72.0   # Límite este amplio (incluye Long Island, Connecticut)
+}
+
+print(f"Rangos NYC definidos:")
+print(f"Latitud: {NYC_METRO['min_lat']}° - {NYC_METRO['max_lat']}°")
+print(f"Longitud: {NYC_METRO['min_long']}° - {NYC_METRO['max_long']}°")
+
+# ANÁLISIS DE OUTLIERS GEOGRÁFICOS
+print(f"\nAnálisis de outliers geográficos:")
+
+# 1. Detectar errores claros (0.0)
+errores_cero = ((df['pickup_latitude'] == 0) & (df['pickup_longitude'] == 0)).sum()
+print(f"Errores claros (0,0): {errores_cero:,}")
+
+# 2. Detectar coordenadas inválidas
+invalido_lat = ((df['pickup_latitude'] < -90) | (df['pickup_latitude'] > 90)).sum()
+invalido_long = ((df['pickup_longitude'] < -180) | (df['pickup_longitude'] > 180)).sum()
+print(f"Coordenadas lat inválidas: {invalido_lat:,}")
+print(f"Coordenadas long inválidas: {invalido_long:,}")
+
+# 3. Detectar puntos fuera de NYC 
+fuera_metro = ((df['pickup_latitude'] < NYC_METRO['min_lat']) | 
+               (df['pickup_latitude'] > NYC_METRO['max_lat']) |
+               (df['pickup_longitude'] < NYC_METRO['min_long']) | 
+               (df['pickup_longitude'] > NYC_METRO['max_long'])).sum()
+
+print(f"Puntos fuera de NYC : {fuera_metro:,}")
+
+# 4. Total de outliers geográficos
+total_outliers_geo = fuera_metro
+print(f"Total outliers geográficos: {total_outliers_geo:,}")
+
+# Crear máscara para datos válidos geográficamente
+mask_geo_valido = (
+    # No errores claros (0,0)
+    ~((df['pickup_latitude'] == 0) & (df['pickup_longitude'] == 0)) &
+    # Coordenadas válidas
+    (df['pickup_latitude'] >= -90) & (df['pickup_latitude'] <= 90) &
+    (df['pickup_longitude'] >= -180) & (df['pickup_longitude'] <= 180) &
+    # Dentro de NYC 
+    (df['pickup_latitude'] >= NYC_METRO['min_lat']) & (df['pickup_latitude'] <= NYC_METRO['max_lat']) &
+    (df['pickup_longitude'] >= NYC_METRO['min_long']) & (df['pickup_longitude'] <= NYC_METRO['max_long'])
+)
+
+# Separar datos con y sin outliers
+df_con_outliers = df.copy()  # Datos originales con outliers
+df_sin_outliers = df[mask_geo_valido].copy()  # Datos sin outliers geográficos
+
+print(f"\nRegistros con outliers: {len(df_con_outliers):,}")
+print(f"Registros sin outliers: {len(df_sin_outliers):,}")
+print(f"Outliers eliminados: {len(df_con_outliers) - len(df_sin_outliers):,}")
+print(f"Porcentaje de datos conservados: {len(df_sin_outliers)/len(df_con_outliers)*100:.1f}%")
 
 # Verificar que no hay valores NaN después de la limpieza
-print(f"Valores No Numeros después de la limpieza: {df[atributos_para_pca].isnull().sum().sum()}")
+print(f"Valores No Numeros después de la limpieza: {df_sin_outliers[atributos_para_pca].isnull().sum().sum()}")
 
-# Guardar archivo limpio
-print("\nGuardando archivo limpio...")
-df.to_csv('2Database/2processed_data_complete_limpio.csv', index=False)
-print("Archivo guardado en 'Database/2processed_data_complete_limpio.csv'")
+# PASO 3: GUARDAR ARCHIVOS CSV
+print(f"\n=== PASO 3: GUARDAR ARCHIVOS CSV ===")
 
-# Verificar el archivo guardado
-print("\nVerificando archivo guardado...")
-df_verificacion = pd.read_csv('2Database/2processed_data_complete_limpio.csv')
-print(f"Registros en archivo guardado: {df_verificacion.shape[0]:,}")
-print(f"¿Coinciden los registros? {df.shape[0] == df_verificacion.shape[0]}")
+# Guardar archivo CON outliers (todos los datos)
+print("Guardando archivo CON outliers (todos los datos)...")
+df_con_outliers.to_csv('2Database/2processed_data_complete_con_outliers.csv', index=False)
+print("Archivo guardado en '2Database/2processed_data_complete_con_outliers.csv'")
 
+# Guardar archivo SIN outliers (solo NYC )
+print("Guardando archivo SIN outliers (solo NYC )...")
+df_sin_outliers.to_csv('2Database/2processed_data_complete_limpio.csv', index=False)
+print("Archivo guardado en '2Database/2processed_data_complete_limpio.csv'")
+
+# Verificar los archivos guardados
+print(f"\nVerificando archivos guardados...")
+df_con_outliers_verif = pd.read_csv('2Database/2processed_data_complete_con_outliers.csv')
+df_sin_outliers_verif = pd.read_csv('2Database/2processed_data_complete_limpio.csv')
+
+print(f"Registros en archivo CON outliers: {df_con_outliers_verif.shape[0]:,}")
+print(f"Registros en archivo SIN outliers: {df_sin_outliers_verif.shape[0]:,}")
+print(f"¿Coinciden los registros? {len(df_con_outliers) == df_con_outliers_verif.shape[0] and len(df_sin_outliers) == df_sin_outliers_verif.shape[0]}")
 
 # Mostrar estadísticas finales
 print(f"\n=== RESUMEN DE LIMPIEZA ===")
 print(f"Registros originales: {df.shape[0]:,}")
-print(f"Registros después de limpieza: {df.shape[0]:,}")
-print(f"Registros en archivo guardado: {df_verificacion.shape[0]:,}")
-print(f"Columnas en archivo final: {list(df.columns)}")
+print(f"Registros con outliers: {len(df_con_outliers):,}")
+print(f"Registros sin outliers (NYC ): {len(df_sin_outliers):,}")
+print(f"Outliers eliminados: {len(df_con_outliers) - len(df_sin_outliers):,}")
+print(f"Porcentaje de datos conservados: {len(df_sin_outliers)/len(df_con_outliers)*100:.1f}%")
+print(f"Columnas en archivo final: {list(df_sin_outliers.columns)}")
 print("\n¡Limpieza completada!") 
