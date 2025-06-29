@@ -9,28 +9,19 @@ print("=== ANÁLISIS INTELIGENTE DE OUTLIERS PARA NYC ===")
 
 # Cargar el dataset
 print("Cargando dataset...")
-df = pd.read_csv('2Database/1processed_data_complete_limpio.csv')
+df = pd.read_csv('2Database/1processed_data_complete.csv')
 print(f"Dataset original: {df.shape}")
 
-# Definir rangos de NYC (más conservadores)
-NYC_CORE = {
-    'min_lat': 40.5,    # Manhattan y áreas centrales
-    'max_lat': 40.9,    
-    'min_long': -74.0,  
-    'max_long': -73.7   
-}
-
-# Definir MBR ampliado para región metropolitana
-NYC_METRO = {
-    'min_lat': 40.4,    # Incluye Staten Island, Bronx, Queens
-    'max_lat': 41.0,    
-    'min_long': -74.3,  # Incluye NJ, aeropuertos
-    'max_long': -73.5   
+# Definir límites amplios para toda la región metropolitana de NYC
+NYC = {
+    'min_lat': 39.0,    # Límite sur amplio (incluye NJ, Long Island)
+    'max_lat': 42.0,    # Límite norte amplio (incluye Connecticut, Upstate NY)
+    'min_long': -75.0,  # Límite oeste amplio (incluye Pennsylvania)
+    'max_long': -72.0   # Límite este amplio (incluye Long Island, Connecticut)
 }
 
 print(f"\nRangos definidos:")
-print(f"NYC Core: Lat {NYC_CORE['min_lat']}°-{NYC_CORE['max_lat']}°, Long {NYC_CORE['min_long']}°-{NYC_CORE['max_long']}°")
-print(f"NYC Metro: Lat {NYC_METRO['min_lat']}°-{NYC_METRO['max_lat']}°, Long {NYC_METRO['min_long']}°-{NYC_METRO['max_long']}°")
+print(f"NYC : Lat {NYC['min_lat']}°-{NYC['max_lat']}°, Long {NYC['min_long']}°-{NYC['max_long']}°")
 
 # ANÁLISIS DE OUTLIERS
 print(f"\n=== ANÁLISIS DE OUTLIERS ===")
@@ -39,37 +30,16 @@ print(f"\n=== ANÁLISIS DE OUTLIERS ===")
 errores_cero = ((df['pickup_latitude'] == 0) & (df['pickup_longitude'] == 0)).sum()
 print(f"Errores claros (0,0): {errores_cero:,}")
 
-# 2. Detectar puntos fuera de NYC Core
-fuera_core = ((df['pickup_latitude'] < NYC_CORE['min_lat']) | 
-              (df['pickup_latitude'] > NYC_CORE['max_lat']) |
-              (df['pickup_longitude'] < NYC_CORE['min_long']) | 
-              (df['pickup_longitude'] > NYC_CORE['max_long'])).sum()
+# 2. Detectar puntos fuera de NYC 
+fuera_metro = ((df['pickup_latitude'] < NYC['min_lat']) | 
+               (df['pickup_latitude'] > NYC['max_lat']) |
+               (df['pickup_longitude'] < NYC['min_long']) | 
+               (df['pickup_longitude'] > NYC['max_long'])).sum()
 
-print(f"Puntos fuera de NYC Core: {fuera_core:,}")
+print(f"Puntos fuera de NYC : {fuera_metro:,}")
 
-# 3. Detectar puntos fuera de NYC Metro
-fuera_metro = ((df['pickup_latitude'] < NYC_METRO['min_lat']) | 
-               (df['pickup_latitude'] > NYC_METRO['max_lat']) |
-               (df['pickup_longitude'] < NYC_METRO['min_long']) | 
-               (df['pickup_longitude'] > NYC_METRO['max_long'])).sum()
 
-print(f"Puntos fuera de NYC Metro: {fuera_metro:,}")
-
-# 4. Puntos en la zona intermedia (entre Core y Metro)
-zona_intermedia = ((df['pickup_latitude'] >= NYC_CORE['min_lat']) & 
-                   (df['pickup_latitude'] <= NYC_CORE['max_lat']) &
-                   (df['pickup_longitude'] >= NYC_CORE['min_long']) & 
-                   (df['pickup_longitude'] <= NYC_CORE['max_long'])).sum()
-
-zona_metro = ((df['pickup_latitude'] >= NYC_METRO['min_lat']) & 
-              (df['pickup_latitude'] <= NYC_METRO['max_lat']) &
-              (df['pickup_longitude'] >= NYC_METRO['min_long']) & 
-              (df['pickup_longitude'] <= NYC_METRO['max_long'])).sum()
-
-zona_intermedia_real = zona_metro - zona_intermedia
-print(f"Puntos en zona intermedia (metro pero no core): {zona_intermedia_real:,}")
-
-# 5. Análisis de coordenadas inválidas
+# 4. Análisis de coordenadas inválidas
 invalido_lat = ((df['pickup_latitude'] < -90) | (df['pickup_latitude'] > 90)).sum()
 invalido_long = ((df['pickup_longitude'] < -180) | (df['pickup_longitude'] > 180)).sum()
 print(f"Coordenadas lat inválidas: {invalido_lat:,}")
@@ -85,11 +55,11 @@ df_valido = df_valido[~(((df_valido['pickup_latitude'] < -90) | (df_valido['pick
 
 print(f"Datos válidos para análisis: {len(df_valido):,}")
 
-# Identificar outliers (fuera de NYC Metro)
-outliers_mask = ((df_valido['pickup_latitude'] < NYC_METRO['min_lat']) | 
-                 (df_valido['pickup_latitude'] > NYC_METRO['max_lat']) |
-                 (df_valido['pickup_longitude'] < NYC_METRO['min_long']) | 
-                 (df_valido['pickup_longitude'] > NYC_METRO['max_long']))
+# Identificar outliers (fuera de NYC )
+outliers_mask = ((df_valido['pickup_latitude'] < NYC['min_lat']) | 
+                 (df_valido['pickup_latitude'] > NYC['max_lat']) |
+                 (df_valido['pickup_longitude'] < NYC['min_long']) | 
+                 (df_valido['pickup_longitude'] > NYC['max_long']))
 
 df_outliers = df_valido[outliers_mask]
 print(f"Outliers identificados: {len(df_outliers):,}")
@@ -130,8 +100,8 @@ if len(df_outliers) > 0:
             print(f"  Longitud: {cluster_data['pickup_longitude'].mean():.6f} ± {cluster_data['pickup_longitude'].std():.6f}")
             
             # Calcular distancia al centro de NYC
-            nyc_center_lat = (NYC_CORE['min_lat'] + NYC_CORE['max_lat']) / 2
-            nyc_center_long = (NYC_CORE['min_long'] + NYC_CORE['max_long']) / 2
+            nyc_center_lat = (NYC['min_lat'] + NYC['max_lat']) / 2
+            nyc_center_long = (NYC['min_long'] + NYC['max_long']) / 2
             
             distancias = np.sqrt((cluster_data['pickup_latitude'] - nyc_center_lat)**2 + 
                                 (cluster_data['pickup_longitude'] - nyc_center_long)**2)
@@ -142,33 +112,21 @@ if len(df_outliers) > 0:
             print(f"  Distancia promedio a NYC: {dist_km:.1f} km")
 
 # ESTRATEGIAS DE FILTRADO
-print(f"\n=== ESTRATEGIAS DE FILTRADO ===")
+print(f"\n=== FILTRADO NYC ===")
 
-# Estrategia 1: Solo NYC Core
-df_core = df[((df['pickup_latitude'] >= NYC_CORE['min_lat']) & 
-              (df['pickup_latitude'] <= NYC_CORE['max_lat']) &
-              (df['pickup_longitude'] >= NYC_CORE['min_long']) & 
-              (df['pickup_longitude'] <= NYC_CORE['max_long']))]
+# Solo NYC Metro (incluye toda la región metropolitana)
+df_metro = df[((df['pickup_latitude'] >= NYC['min_lat']) & 
+               (df['pickup_latitude'] <= NYC['max_lat']) &
+               (df['pickup_longitude'] >= NYC['min_long']) & 
+               (df['pickup_longitude'] <= NYC['max_long']))]
 
-# Estrategia 2: NYC Metro (incluye zona intermedia)
-df_metro = df[((df['pickup_latitude'] >= NYC_METRO['min_lat']) & 
-               (df['pickup_latitude'] <= NYC_METRO['max_lat']) &
-               (df['pickup_longitude'] >= NYC_METRO['min_long']) & 
-               (df['pickup_longitude'] <= NYC_METRO['max_long']))]
-
-# Estrategia 3: Eliminar solo errores claros
-df_sin_errores = df[~((df['pickup_latitude'] == 0) & (df['pickup_longitude'] == 0))]
-df_sin_errores = df_sin_errores[~(((df_sin_errores['pickup_latitude'] < -90) | (df_sin_errores['pickup_latitude'] > 90)) |
-                                  ((df_sin_errores['pickup_longitude'] < -180) | (df_sin_errores['pickup_longitude'] > 180)))]
-
-print(f"Estrategia 1 (NYC Core): {len(df_core):,} registros ({len(df_core)/len(df)*100:.1f}%)")
-print(f"Estrategia 2 (NYC Metro): {len(df_metro):,} registros ({len(df_metro)/len(df)*100:.1f}%)")
-print(f"Estrategia 3 (Sin errores): {len(df_sin_errores):,} registros ({len(df_sin_errores)/len(df)*100:.1f}%)")
+print(f"Datos dentro de NYC: {len(df_metro):,} registros ({len(df_metro)/len(df)*100:.1f}%)")
+print(f"Datos fuera de NYC: {len(df) - len(df_metro):,} registros ({(len(df) - len(df_metro))/len(df)*100:.1f}%)")
 
 # VISUALIZACIÓN
 print(f"\nGenerando visualización...")
 
-fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
 
 # Muestra para visualización
 if len(df) > 50000:
@@ -183,47 +141,23 @@ ax1.set_title('Distribución Completa', fontweight='bold')
 ax1.set_xlabel('Longitud')
 ax1.set_ylabel('Latitud')
 
-# Dibujar regiones
-ax1.plot([NYC_CORE['min_long'], NYC_CORE['max_long'], NYC_CORE['max_long'], NYC_CORE['min_long'], NYC_CORE['min_long']],
-         [NYC_CORE['min_lat'], NYC_CORE['min_lat'], NYC_CORE['max_lat'], NYC_CORE['max_lat'], NYC_CORE['min_lat']],
-         'r-', linewidth=2, label='NYC Core')
-
-ax1.plot([NYC_METRO['min_long'], NYC_METRO['max_long'], NYC_METRO['max_long'], NYC_METRO['min_long'], NYC_METRO['min_long']],
-         [NYC_METRO['min_lat'], NYC_METRO['min_lat'], NYC_METRO['max_lat'], NYC_METRO['max_lat'], NYC_METRO['min_lat']],
-         'g--', linewidth=2, label='NYC Metro')
+# Dibujar región NYC 
+ax1.plot([NYC['min_long'], NYC['max_long'], NYC['max_long'], NYC['min_long'], NYC['min_long']],
+         [NYC['min_lat'], NYC['min_lat'], NYC['max_lat'], NYC['max_lat'], NYC['min_lat']],
+         'g--', linewidth=2, label='NYC ')
 
 ax1.legend()
 ax1.grid(True, alpha=0.3)
 
-# 2. NYC Core
-if len(df_core) > 0:
-    core_viz = df_core.sample(n=min(50000, len(df_core)), random_state=42) if len(df_core) > 50000 else df_core
-    ax2.scatter(core_viz['pickup_longitude'], core_viz['pickup_latitude'], 
-               alpha=0.3, s=1, color='red', marker='.')
-ax2.set_title('NYC Core', fontweight='bold')
+# 2. NYC 
+if len(df_metro) > 0:
+    metro_viz = df_metro.sample(n=min(50000, len(df_metro)), random_state=42) if len(df_metro) > 50000 else df_metro
+    ax2.scatter(metro_viz['pickup_longitude'], metro_viz['pickup_latitude'], 
+               alpha=0.3, s=1, color='blue', marker='.')
+ax2.set_title('NYC ', fontweight='bold')
 ax2.set_xlabel('Longitud')
 ax2.set_ylabel('Latitud')
 ax2.grid(True, alpha=0.3)
-
-# 3. NYC Metro
-if len(df_metro) > 0:
-    metro_viz = df_metro.sample(n=min(50000, len(df_metro)), random_state=42) if len(df_metro) > 50000 else df_metro
-    ax3.scatter(metro_viz['pickup_longitude'], metro_viz['pickup_latitude'], 
-               alpha=0.3, s=1, color='blue', marker='.')
-ax3.set_title('NYC Metro', fontweight='bold')
-ax3.set_xlabel('Longitud')
-ax3.set_ylabel('Latitud')
-ax3.grid(True, alpha=0.3)
-
-# 4. Outliers
-if len(df_outliers) > 0:
-    outliers_viz = df_outliers.sample(n=min(10000, len(df_outliers)), random_state=42) if len(df_outliers) > 10000 else df_outliers
-    ax4.scatter(outliers_viz['pickup_longitude'], outliers_viz['pickup_latitude'], 
-               alpha=0.5, s=2, color='orange', marker='.')
-ax4.set_title('Outliers', fontweight='bold')
-ax4.set_xlabel('Longitud')
-ax4.set_ylabel('Latitud')
-ax4.grid(True, alpha=0.3)
 
 plt.tight_layout()
 plt.savefig('3Preprocesamiento/img/analisis_outliers_inteligente.png', dpi=300, bbox_inches='tight')
@@ -234,9 +168,9 @@ print("Visualización guardada: analisis_outliers_inteligente.png")
 # RECOMENDACIÓN
 print(f"\n=== RECOMENDACIÓN ===")
 print("Basado en el análisis, recomiendo:")
-print("1. Eliminar errores claros (0,0) y coordenadas inválidas")
-print("2. Usar NYC Metro como filtro principal (incluye aeropuertos y áreas cercanas)")
-print("3. Considerar clusters de outliers que estén a menos de 50km de NYC")
+print("1. Usar NYC como filtro principal (39°-42° lat, -75° a -72° long)")
+print("2. Este filtro incluye toda la región metropolitana de NYC")
+print("3. Elimina datos de otras ciudades y mantiene solo NYC")
 
 print(f"\nProceso completado!")
 print("=" * 60) 
