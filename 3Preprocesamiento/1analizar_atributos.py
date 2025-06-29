@@ -73,20 +73,20 @@ print(f"\nANÁLISIS DE VALORES EXTREMOS:")
 
 for columna in atributos_tarifa:
     if columna in df.columns:
-        print(f"\n🔍 {columna.upper()}:")
+        print(f"\n {columna.upper()}:")
         
         # Valores más negativos
         valores_neg = df[df[columna] < 0][columna].sort_values()
         if len(valores_neg) > 0:
-            print(f"   Valores más negativos:")
-            for valor in valores_neg.head(3):
+            print(f"   Valor más negativo:")
+            for valor in valores_neg.head(1):
                 print(f"     {valor:.2f}")
         
         # Valores más positivos
         valores_pos = df[df[columna] > 0][columna].sort_values(ascending=False)
         if len(valores_pos) > 0:
-            print(f"   Valores más positivos:")
-            for valor in valores_pos.head(3):
+            print(f"   Valor más positivo:")
+            for valor in valores_pos.head(1):
                 print(f"     {valor:.2f}")
 
 # Verificar si total_amount coincide con la suma
@@ -134,7 +134,7 @@ for columna in atributos_tarifa:
     if columna in df.columns:
         filas_negativas = df[df[columna] < -100]  # Valores muy negativos
         if len(filas_negativas) > 0:
-            print(f"\n🔍 Filas con {columna} < -100:")
+            print(f"\nFilas con {columna} < -100:")
             print(f"   Encontradas: {len(filas_negativas)} filas")
             
             for i, (idx, row) in enumerate(filas_negativas.head(2).iterrows()):
