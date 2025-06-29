@@ -43,25 +43,18 @@ lon_outliers = (df['pickup_longitude'] == 0.0).sum()
 print(f"Puntos con latitud 0.0: {lat_outliers:,}")
 print(f"Puntos con longitud 0.0: {lon_outliers:,}")
 
-# Verificar rangos geográficos válidos
-lat_range_outliers = ((df['pickup_latitude'] < -90) | (df['pickup_latitude'] > 90)).sum()
-lon_range_outliers = ((df['pickup_longitude'] < -180) | (df['pickup_longitude'] > 180)).sum()
-
-print(f"Puntos con latitud fuera de rango (-90, 90): {lat_range_outliers:,}")
-print(f"Puntos con longitud fuera de rango (-180, 180): {lon_range_outliers:,}")
-
 # Separar outliers del dataset principal
 df_outliers = df[outlier_mask].copy()
-df_clean = df[~outlier_mask].copy()
+df_limpio = df[~outlier_mask].copy()
 
-print(f"\nDataset limpio: {len(df_clean):,} puntos ({len(df_clean)/len(df)*100:.2f}%)")
+print(f"\nDataset limpio: {len(df_limpio):,} puntos ({len(df_limpio)/len(df)*100:.2f}%)")
 print(f"Dataset outliers: {len(df_outliers):,} puntos ({len(df_outliers)/len(df)*100:.2f}%)")
 
 # Análisis detallado de outliers
 if len(df_outliers) > 0:
     print(f"\n=== ANÁLISIS DETALLADO DE OUTLIERS ===")
     
-    # Verificar si outliers tienen otros atributos válidos
+    # Verificamos si los outliers tienen atributos válidos
     exclude_cols = ['pickup_latitude', 'pickup_longitude']
     outlier_attr_cols = [col for col in df_outliers.columns if col not in exclude_cols]
     
@@ -99,12 +92,15 @@ if len(df_outliers) > 0:
 # CALCULAR NÚMERO APROPIADO DE CLUSTERS OPTIMIZADO
 print(f"\n=== CÁLCULO DE CLUSTERS OPTIMIZADO ===")
 
-# Para 10.7M puntos válidos, usar reglas más apropiadas
-n_points = len(df_clean)
+# Para 10.9 M puntos válidos, usar reglas más apropiadas
+n_points = len(df_limpio)
+n_points_outliers = len(df_outliers)
 n_total = len(df)
 
 print(f"Dataset total: {n_total:,} puntos")
 print(f"Dataset válido: {n_points:,} puntos")
+print(f"Dataset outiliers: {n_points_outliers:,} puntos")
+
 print(f"Porcentaje válido: {n_points/n_total*100:.2f}%")
 
 # Cálculo optimizado de clusters
@@ -330,8 +326,96 @@ def analizar_y_decidir_outliers(df_outliers):
     
     return df_recoverable, None
 
+# FUNCIÓN PARA CLUSTERIZAR OUTLIERS POR ATRIBUTOS
+def clusterizar_outliers_por_atributos(df_outliers, n_clusters_outliers=10):
+    """
+    Clusterizar outliers basándose solo en sus atributos (sin coordenadas)
+    """
+    print(f"\n=== CLUSTERIZACIÓN DE OUTLIERS POR ATRIBUTOS ===")
+    
+    if len(df_outliers) == 0:
+        print("No hay outliers para clusterizar")
+        return df_outliers
+    
+    print(f"Outliers a clusterizar: {len(df_outliers):,} puntos")
+    
+    # Identificar atributos disponibles (excluir coordenadas)
+    exclude_cols = ['pickup_latitude', 'pickup_longitude', 'cluster_espacial', 'sub_cluster', 'cluster_jerarquico']
+    attr_cols = [col for col in df_outliers.columns if col not in exclude_cols]
+    
+    if len(attr_cols) == 0:
+        print("No hay atributos disponibles para clustering de outliers")
+        return df_outliers
+    
+    # Seleccionar atributos numéricos
+    numeric_cols = df_outliers[attr_cols].select_dtypes(include=[np.number]).columns.tolist()
+    
+    if len(numeric_cols) == 0:
+        print("No hay atributos numéricos para clustering de outliers")
+        return df_outliers
+    
+    print(f"Atributos numéricos disponibles: {len(numeric_cols)}")
+    print(f"Atributos: {numeric_cols[:5]}...")  # Mostrar primeros 5
+    
+    # Limitar a los primeros 15 atributos para eficiencia
+    features_cols = numeric_cols[:15]
+    features = df_outliers[features_cols].values
+    
+    print(f"Usando {len(features_cols)} atributos para clustering")
+    
+    # Verificar que hay suficientes puntos para clustering
+    if len(features) < n_clusters_outliers * 2:
+        n_clusters_outliers = max(1, len(features) // 2)
+        print(f"Ajustando número de clusters a {n_clusters_outliers}")
+    
+    if n_clusters_outliers <= 1:
+        print("No se pueden crear clusters (muy pocos puntos)")
+        df_outliers['cluster_espacial'] = -1
+        df_outliers['sub_cluster'] = -1
+        df_outliers['cluster_jerarquico'] = 'outlier_single'
+        return df_outliers
+    
+    # Normalizar features
+    features_norm = (features - features.mean(axis=0)) / (features.std(axis=0) + 1e-8)
+    
+    # Aplicar K-Means para clustering de outliers
+    print(f"Aplicando K-Means para {n_clusters_outliers} clusters de outliers...")
+    
+    kmeans_outliers = KMeans(
+        n_clusters=n_clusters_outliers,
+        random_state=42,
+        n_init=5,
+        max_iter=200,
+        tol=1e-4
+    )
+    
+    outlier_labels = kmeans_outliers.fit_predict(features_norm)
+    
+    # Calcular métricas de calidad
+    outlier_inertia = kmeans_outliers.inertia_
+    outlier_inertia_per_point = outlier_inertia / len(features)
+    
+    print(f"Clustering de outliers completado:")
+    print(f"  Clusters creados: {n_clusters_outliers}")
+    print(f"  Inercia total: {outlier_inertia:.2f}")
+    print(f"  Inercia promedio por punto: {outlier_inertia_per_point:.6f}")
+    
+    # Asignar clusters a outliers
+    df_outliers_clustered = df_outliers.copy()
+    df_outliers_clustered['cluster_espacial'] = -1  # Cluster especial para outliers
+    df_outliers_clustered['sub_cluster'] = outlier_labels
+    df_outliers_clustered['cluster_jerarquico'] = 'outlier_' + outlier_labels.astype(str)
+    
+    # Análisis de distribución de clusters de outliers
+    outlier_cluster_counts = df_outliers_clustered['sub_cluster'].value_counts().sort_index()
+    print(f"\nDistribución de clusters de outliers:")
+    for cluster_id, count in outlier_cluster_counts.items():
+        print(f"  Cluster outlier {cluster_id}: {count:,} puntos")
+    
+    return df_outliers_clustered
+
 # FUNCIÓN PRINCIPAL: CLUSTERIZACIÓN COMPLETA CON OUTLIERS
-def clusterizacion_completa_mejorada(df, n_clusters_espacial=100, n_sub_clusters=5):
+def clusterizacion_completa_mejorada(df, n_clusters_espacial=100, n_sub_clusters=5, n_clusters_outliers=10):
     """
     Clusterización completa con manejo inteligente de outliers
     """
@@ -340,26 +424,23 @@ def clusterizacion_completa_mejorada(df, n_clusters_espacial=100, n_sub_clusters
     # Separar outliers
     outlier_mask = (df['pickup_latitude'] == 0.0) & (df['pickup_longitude'] == 0.0)
     df_outliers = df[outlier_mask].copy()
-    df_clean = df[~outlier_mask].copy()
+    df_limpio = df[~outlier_mask].copy()
     
-    print(f"Dataset limpio: {len(df_clean):,} puntos")
+    print(f"Dataset limpio: {len(df_limpio):,} puntos")
     print(f"Outliers: {len(df_outliers):,} puntos")
     
-    # Analizar outliers y decidir qué hacer
-    df_recoverable, df_to_remove = analizar_y_decidir_outliers(df_outliers)
-    
     # FASE 1: Clustering espacial en datos limpios
-    coords_clean = df_clean[['pickup_latitude', 'pickup_longitude']].values
+    coords_limpio = df_limpio[['pickup_latitude', 'pickup_longitude']].values
     labels_espacial, centroids_espacial, inertia = clusterizacion_espacial_mejorada(
-        coords_clean, n_clusters_espacial
+        coords_limpio, n_clusters_espacial
     )
     
     # Agregar labels espaciales
-    df_result = df_clean.copy()
+    df_result = df_limpio.copy()
     df_result['cluster_espacial'] = labels_espacial
     
-    # FASE 2: Sub-clustering por atributos
-    print(f"\n=== FASE 2: SUB-CLUSTERIZACIÓN POR ATRIBUTOS ===")
+    # FASE 2: Sub-clustering por atributos en datos limpios
+    print(f"\n=== FASE 2: SUB-CLUSTERIZACIÓN POR ATRIBUTOS (DATOS LIMPIOS) ===")
     df_result['sub_cluster'] = -1
     
     # Procesar cada cluster espacial
@@ -375,39 +456,44 @@ def clusterizacion_completa_mejorada(df, n_clusters_espacial=100, n_sub_clusters
         sub_labels = sub_clusterizacion_mejorada(df_cluster, cluster_id, n_sub_clusters)
         df_result.loc[mask, 'sub_cluster'] = cluster_id * n_sub_clusters + sub_labels
     
-    # Crear identificador jerárquico
+    # Crear identificador jerárquico para datos limpios
     df_result['cluster_jerarquico'] = df_result['cluster_espacial'].astype(str) + '_' + df_result['sub_cluster'].astype(str)
     
-    # Manejar outliers según el análisis
-    if df_recoverable is not None and len(df_recoverable) > 0:
-        print(f"\n=== MANEJO DE OUTLIERS RECUPERABLES ===")
-        df_recoverable['cluster_espacial'] = -1  # Cluster especial para outliers
-        df_recoverable['sub_cluster'] = -1
-        df_recoverable['cluster_jerarquico'] = 'outlier_recoverable'
-        
-        # Concatenar outliers recuperables al resultado
-        df_result = pd.concat([df_result, df_recoverable], ignore_index=True)
-        print(f"Outliers recuperables agregados: {len(df_recoverable):,} puntos")
+    # FASE 3: Clustering de outliers por atributos
+    print(f"\n=== FASE 3: CLUSTERING DE OUTLIERS POR ATRIBUTOS ===")
     
-    if df_to_remove is not None and len(df_to_remove) > 0:
-        print(f"\n=== OUTLIERS PARA ELIMINAR ===")
-        print(f"Outliers eliminados: {len(df_to_remove):,} puntos")
-        # Guardar outliers eliminados para análisis posterior
-        df_to_remove['cluster_espacial'] = -2  # Cluster especial para outliers eliminados
-        df_to_remove['sub_cluster'] = -2
-        df_to_remove['cluster_jerarquico'] = 'outlier_removed'
+    # Calcular número apropiado de clusters para outliers
+    if len(df_outliers) > 0:
+        # Regla: 1 cluster por cada 1,000-2,000 outliers
+        n_clusters_outliers_ajustado = max(5, min(50, len(df_outliers) // 2000))
+        print(f"Clusters para outliers calculados: {n_clusters_outliers_ajustado}")
         
-        # Concatenar outliers eliminados al resultado final
-        df_result = pd.concat([df_result, df_to_remove], ignore_index=True)
+        df_outliers_clustered = clusterizar_outliers_por_atributos(
+            df_outliers, n_clusters_outliers_ajustado
+        )
+        
+        # Concatenar outliers clusterizados al resultado
+        df_result = pd.concat([df_result, df_outliers_clustered], ignore_index=True)
+        print(f"Outliers clusterizados agregados: {len(df_outliers_clustered):,} puntos")
+    else:
+        print("No hay outliers para clusterizar")
     
     return df_result, centroids_espacial, inertia
 
 # APLICAR CLUSTERIZACIÓN MEJORADA
 print(f"\n=== APLICANDO CLUSTERIZACIÓN MEJORADA ===")
 
+# Calcular número de clusters para outliers
+n_clusters_outliers = max(5, min(50, len(df_outliers) // 2000)) if len(df_outliers) > 0 else 10
+
+print(f"Parámetros de clustering:")
+print(f"  Clusters espaciales: {n_clusters_espacial}")
+print(f"  Sub-clusters por cluster: {n_sub_clusters}")
+print(f"  Clusters para outliers: {n_clusters_outliers}")
+
 # Aplicar clusterización
 df_clustered, centroids_espacial, inertia_total = clusterizacion_completa_mejorada(
-    df, n_clusters_espacial, n_sub_clusters
+    df, n_clusters_espacial, n_sub_clusters, n_clusters_outliers
 )
 
 # ANÁLISIS DE RESULTADOS
@@ -419,8 +505,8 @@ n_outliers_final = (df_clustered['cluster_espacial'] == -1).sum()
 n_clustered = n_total - n_outliers_final
 
 print(f"Total puntos procesados: {n_total:,}")
-print(f"Puntos en clusters: {n_clustered:,}")
-print(f"Outliers: {n_outliers_final:,}")
+print(f"Puntos en clusters espaciales: {n_clustered:,}")
+print(f"Outliers clusterizados: {n_outliers_final:,}")
 
 # Estadísticas de clusters espaciales (excluyendo outliers)
 df_clusters_only = df_clustered[df_clustered['cluster_espacial'] != -1]
@@ -432,19 +518,41 @@ print(f"Promedio puntos por cluster: {cluster_espacial_counts.mean():.0f}")
 print(f"Mínimo puntos por cluster: {cluster_espacial_counts.min()}")
 print(f"Máximo puntos por cluster: {cluster_espacial_counts.max()}")
 
-# Estadísticas de sub-clusters
+# Estadísticas de sub-clusters (datos limpios)
 sub_cluster_counts = df_clusters_only['sub_cluster'].value_counts()
 
-print(f"\nEstadísticas de sub-clusters:")
+print(f"\nEstadísticas de sub-clusters (datos limpios):")
 print(f"Sub-clusters únicos: {len(sub_cluster_counts)}")
 print(f"Promedio puntos por sub-cluster: {sub_cluster_counts.mean():.0f}")
 print(f"Mínimo puntos por sub-cluster: {sub_cluster_counts.min()}")
 print(f"Máximo puntos por sub-cluster: {sub_cluster_counts.max()}")
 
+# Estadísticas de clusters de outliers
+df_outliers_only = df_clustered[df_clustered['cluster_espacial'] == -1]
+if len(df_outliers_only) > 0:
+    outlier_cluster_counts = df_outliers_only['sub_cluster'].value_counts()
+    
+    print(f"\nEstadísticas de clusters de outliers:")
+    print(f"Clusters de outliers únicos: {len(outlier_cluster_counts)}")
+    print(f"Promedio puntos por cluster outlier: {outlier_cluster_counts.mean():.0f}")
+    print(f"Mínimo puntos por cluster outlier: {outlier_cluster_counts.min()}")
+    print(f"Máximo puntos por cluster outlier: {outlier_cluster_counts.max()}")
+    
+    print(f"\nDistribución de clusters de outliers:")
+    for cluster_id, count in outlier_cluster_counts.sort_index().items():
+        print(f"  Cluster outlier {cluster_id}: {count:,} puntos")
+
 # Distribución de clusters jerárquicos
 hierarchical_dist = df_clustered['cluster_jerarquico'].value_counts()
 print(f"\nDistribución de clusters jerárquicos:")
 print(f"Clusters jerárquicos únicos: {len(hierarchical_dist)}")
+
+# Contar tipos de clusters
+outlier_clusters = hierarchical_dist[hierarchical_dist.index.str.startswith('outlier_')]
+normal_clusters = hierarchical_dist[~hierarchical_dist.index.str.startswith('outlier_')]
+
+print(f"Clusters normales (espaciales + atributos): {len(normal_clusters)}")
+print(f"Clusters de outliers (solo atributos): {len(outlier_clusters)}")
 
 # VISUALIZACIÓN
 print(f"\n=== GENERANDO VISUALIZACIONES ===")
@@ -459,20 +567,20 @@ else:
 plt.figure(figsize=(20, 8))
 
 plt.subplot(1, 2, 1)
-# Filtrar outliers para visualización
-df_viz_clean = df_viz[df_viz['cluster_espacial'] != -1]
-if len(df_viz_clean) > 0:
-    scatter1 = plt.scatter(df_viz_clean['pickup_longitude'], df_viz_clean['pickup_latitude'], 
-                          c=df_viz_clean['cluster_espacial'], cmap='tab20', alpha=0.6, s=0.5)
+# Filtrar datos limpios para visualización
+df_viz_limpio = df_viz[df_viz['cluster_espacial'] != -1]
+if len(df_viz_limpio) > 0:
+    scatter1 = plt.scatter(df_viz_limpio['pickup_longitude'], df_viz_limpio['pickup_latitude'], 
+                          c=df_viz_limpio['cluster_espacial'], cmap='tab20', alpha=0.6, s=0.5)
     plt.colorbar(scatter1, label='Cluster Espacial')
 
-# Mostrar outliers en rojo
+# Mostrar outliers en rojo (sin coordenadas válidas, se muestran en 0,0)
 df_viz_outliers = df_viz[df_viz['cluster_espacial'] == -1]
 if len(df_viz_outliers) > 0:
-    plt.scatter(df_viz_outliers['pickup_longitude'], df_viz_outliers['pickup_latitude'], 
-               c='red', alpha=0.8, s=1, label=f'Outliers ({len(df_viz_outliers):,})')
+    plt.scatter(0, 0, c='red', alpha=0.8, s=100, marker='x', 
+               label=f'Outliers ({len(df_viz_outliers):,}) - Clusterizados por atributos')
 
-plt.title(f'Fase 1: Clusters Espaciales ({n_clusters_espacial} clusters)\n+ Outliers en rojo', fontsize=14)
+plt.title(f'Fase 1: Clusters Espaciales ({n_clusters_espacial} clusters)\n+ Outliers clusterizados por atributos', fontsize=14)
 plt.xlabel('Longitud')
 plt.ylabel('Latitud')
 plt.grid(True, alpha=0.3)
@@ -480,14 +588,14 @@ plt.legend()
 
 # Gráfica 2: Clusters jerárquicos
 plt.subplot(1, 2, 2)
-if len(df_viz_clean) > 0:
-    scatter2 = plt.scatter(df_viz_clean['pickup_longitude'], df_viz_clean['pickup_latitude'], 
-                          c=df_viz_clean['cluster_espacial'], cmap='tab20', alpha=0.6, s=0.5)
+if len(df_viz_limpio) > 0:
+    scatter2 = plt.scatter(df_viz_limpio['pickup_longitude'], df_viz_limpio['pickup_latitude'], 
+                          c=df_viz_limpio['cluster_espacial'], cmap='tab20', alpha=0.6, s=0.5)
     plt.colorbar(scatter2, label='Cluster Espacial')
 
 if len(df_viz_outliers) > 0:
-    plt.scatter(df_viz_outliers['pickup_longitude'], df_viz_outliers['pickup_latitude'], 
-               c='red', alpha=0.8, s=1, label=f'Outliers ({len(df_viz_outliers):,})')
+    plt.scatter(0, 0, c='red', alpha=0.8, s=100, marker='x', 
+               label=f'Outliers ({len(df_viz_outliers):,}) - {len(outlier_clusters)} clusters')
 
 plt.title(f'Fase 2: Clusters Jerárquicos\n({len(hierarchical_dist)} clusters totales)', fontsize=14)
 plt.xlabel('Longitud')
@@ -512,17 +620,30 @@ plt.ylabel('Número de Puntos')
 plt.title('Tamaño de Clusters Espaciales')
 plt.grid(True, alpha=0.3)
 
-# Subplot 2: Distribución de sub-clusters
+# Subplot 2: Distribución de sub-clusters (datos limpios)
 plt.subplot(2, 3, 2)
 sub_cluster_sizes = df_clusters_only['sub_cluster'].value_counts().sort_index()
 plt.bar(range(len(sub_cluster_sizes)), sub_cluster_sizes.values, alpha=0.7, color='orange')
 plt.xlabel('Sub-cluster ID')
 plt.ylabel('Número de Puntos')
-plt.title('Tamaño de Sub-clusters')
+plt.title('Tamaño de Sub-clusters (Datos Limpios)')
 plt.grid(True, alpha=0.3)
 
-# Subplot 3: Sub-clusters por cluster espacial
+# Subplot 3: Distribución de clusters de outliers
 plt.subplot(2, 3, 3)
+if len(df_outliers_only) > 0:
+    outlier_cluster_sizes = df_outliers_only['sub_cluster'].value_counts().sort_index()
+    plt.bar(range(len(outlier_cluster_sizes)), outlier_cluster_sizes.values, alpha=0.7, color='red')
+    plt.xlabel('Cluster Outlier ID')
+    plt.ylabel('Número de Puntos')
+    plt.title('Tamaño de Clusters de Outliers')
+    plt.grid(True, alpha=0.3)
+else:
+    plt.text(0.5, 0.5, 'No hay outliers', ha='center', va='center', transform=plt.gca().transAxes)
+    plt.title('Clusters de Outliers')
+
+# Subplot 4: Sub-clusters por cluster espacial
+plt.subplot(2, 3, 4)
 sub_per_espacial = df_clusters_only.groupby('cluster_espacial')['sub_cluster'].nunique()
 plt.bar(range(len(sub_per_espacial)), sub_per_espacial.values, alpha=0.7, color='green')
 plt.xlabel('Cluster Espacial ID')
@@ -530,8 +651,8 @@ plt.ylabel('Número de Sub-clusters')
 plt.title('Sub-clusters por Cluster Espacial')
 plt.grid(True, alpha=0.3)
 
-# Subplot 4: Análisis de outliers
-plt.subplot(2, 3, 4)
+# Subplot 5: Análisis de atributos de outliers
+plt.subplot(2, 3, 5)
 if len(df_outliers) > 0:
     outlier_cols = [col for col in df_outliers.columns if col not in ['pickup_latitude', 'pickup_longitude', 'cluster_espacial', 'sub_cluster', 'cluster_jerarquico']]
     if len(outlier_cols) > 0:
@@ -544,20 +665,20 @@ if len(df_outliers) > 0:
             plt.title(f'Distribución de {numeric_outlier_cols[0]} en Outliers')
             plt.grid(True, alpha=0.3)
 
-# Subplot 5: Resumen estadístico
-plt.subplot(2, 3, 5)
+# Subplot 6: Resumen estadístico
+plt.subplot(2, 3, 6)
 plt.axis('off')
 summary_text = f"""
 RESUMEN MEJORADO:
 Dataset Total: {len(df):,} puntos
-Dataset Limpio: {len(df_clean):,} puntos
+Dataset Limpio: {len(df_limpio):,} puntos
 Outliers: {len(df_outliers):,} puntos
 
 CLUSTERS:
 Espaciales: {n_clusters_espacial}
 Sub-clusters por cluster: {n_sub_clusters}
+Clusters de outliers: {len(outlier_clusters) if len(df_outliers_only) > 0 else 0}
 Total Jerárquicos: {len(hierarchical_dist)}
-Outliers: {n_outliers_final:,}
 
 CALIDAD:
 Inercia Total: {inertia_total:,.0f}
@@ -565,15 +686,6 @@ Promedio puntos/cluster: {cluster_espacial_counts.mean():.0f}
 """
 plt.text(0.1, 0.5, summary_text, fontsize=10, verticalalignment='center',
          bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue", alpha=0.8))
-
-# Subplot 6: Comparación con/sin outliers
-plt.subplot(2, 3, 6)
-categories = ['Datos Limpios', 'Outliers']
-sizes = [len(df_clean), len(df_outliers)]
-colors = ['lightblue', 'red']
-
-plt.pie(sizes, labels=categories, colors=colors, autopct='%1.1f%%', startangle=90)
-plt.title('Distribución: Datos Limpios vs Outliers')
 
 plt.tight_layout()
 plt.savefig('3Preprocesamiento/AnalisisCoord/analisis_mejorado.png', dpi=300, bbox_inches='tight')
@@ -616,12 +728,17 @@ print(f"Centroides mejorados: {centroids_file}")
 
 print(f"\n=== RESUMEN FINAL ===")
 print(f"Dataset original: {len(df):,} puntos")
-print(f"Dataset limpio: {len(df_clean):,} puntos")
+print(f"Dataset limpio: {len(df_limpio):,} puntos")
 print(f"Outliers: {len(df_outliers):,} puntos")
 print(f"Clusters espaciales: {n_clusters_espacial}")
 print(f"Sub-clusters por cluster: {n_sub_clusters}")
+print(f"Clusters de outliers: {len(outlier_clusters) if len(df_outliers_only) > 0 else 0}")
 print(f"Total clusters jerárquicos: {len(hierarchical_dist)}")
 print(f"Inercia total: {inertia_total:,.0f}")
+
+print(f"\nTipos de clusters generados:")
+print(f"  - Clusters normales (espaciales + atributos): {len(normal_clusters)}")
+print(f"  - Clusters de outliers (solo atributos): {len(outlier_clusters)}")
 
 print(f"\nArchivos generados:")
 print(f"  - clusters_mejorados.png (visualización)")
