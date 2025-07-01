@@ -311,4 +311,15 @@ plt.legend()
 plt.tight_layout()
 plt.savefig('3Preprocesamiento/img/clusters_geograficos.png', dpi=200)
 plt.close()
-print("Gráfico de clusters guardado en: 3Preprocesamiento/img/clusters_geograficos.png") 
+print("Gráfico de clusters guardado en: 3Preprocesamiento/img/clusters_geograficos.png")
+
+# Guardar dataset extendido con centroides
+# Crear DataFrame de centroides
+if len(centroids_espacial) > 0:
+    df_centroides = pd.DataFrame(centroids_espacial, columns=['centroide_lat', 'centroide_long'])
+    df_centroides['cluster_espacial'] = df_centroides.index
+    # Unir centroides a cada punto según su cluster
+    df_clustered = df_clustered.merge(df_centroides, on='cluster_espacial', how='left')
+    # Guardar el dataset extendido
+    df_clustered.to_csv('2Database/3clusterizacion_geografica_with_centroids.csv', index=False)
+    print("Archivo guardado: 2Database/3clusterizacion_geografica_with_centroids.csv") 
