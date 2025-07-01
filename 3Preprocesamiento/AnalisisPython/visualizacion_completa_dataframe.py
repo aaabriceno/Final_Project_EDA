@@ -15,8 +15,8 @@ print(f"Dataset shape: {df.shape}")
 canvas = ds.Canvas(
     plot_width=2500,
     plot_height=1200,
-    lat_min_max=(-74.15, -73.70),  # Bounding box NYC
-    long_min_max=(40.58, 40.92)
+    x_range=(-74.15, -73.70),  # Longitud
+    y_range=(40.58, 40.92)    # Latitud
 )
 
 # Crear el agregado de puntos
