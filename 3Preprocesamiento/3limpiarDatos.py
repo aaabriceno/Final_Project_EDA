@@ -65,10 +65,10 @@ print(f"\n=== PASO 2: FILTRADO POR RANGO NYC  ===")
 
 # Definir límites amplios para toda la región metropolitana de NYC
 NYC_METRO = {
-    'min_lat': 39.0,    # Límite sur amplio (incluye NJ, Long Island)
-    'max_lat': 42.0,    # Límite norte amplio (incluye Connecticut, Upstate NY)
-    'min_long': -75.0,  # Límite oeste amplio (incluye Pennsylvania)
-    'max_long': -72.0   # Límite este amplio (incluye Long Island, Connecticut)
+    'min_lat': 40.5774,    # Límite sur amplio (incluye NJ, Long Island)
+    'max_lat': 40.9176,    # Límite norte amplio (incluye Connecticut, Upstate NY)
+    'min_long': -74.15,  # Límite oeste amplio (incluye Pennsylvania)
+    'max_long': -73.7004   # Límite este amplio (incluye Long Island, Connecticut)
 }
 
 print(f"Rangos NYC definidos:")
@@ -127,11 +127,6 @@ print(f"Valores No Numeros después de la limpieza: {df_sin_outliers[atributos_p
 # PASO 3: GUARDAR ARCHIVOS CSV
 print(f"\n=== PASO 3: GUARDAR ARCHIVOS CSV ===")
 
-# Guardar archivo CON outliers (todos los datos)
-print("Guardando archivo CON outliers (todos los datos)...")
-df_con_outliers.to_csv('2Database/2processed_data_complete_con_outliers.csv', index=False)
-print("Archivo guardado en '2Database/2processed_data_complete_con_outliers.csv'")
-
 # Guardar archivo SIN outliers (solo NYC )
 print("Guardando archivo SIN outliers (solo NYC )...")
 df_sin_outliers.to_csv('2Database/2processed_data_complete_limpio.csv', index=False)
@@ -139,12 +134,10 @@ print("Archivo guardado en '2Database/2processed_data_complete_limpio.csv'")
 
 # Verificar los archivos guardados
 print(f"\nVerificando archivos guardados...")
-df_con_outliers_verif = pd.read_csv('2Database/2processed_data_complete_con_outliers.csv')
 df_sin_outliers_verif = pd.read_csv('2Database/2processed_data_complete_limpio.csv')
 
-print(f"Registros en archivo CON outliers: {df_con_outliers_verif.shape[0]:,}")
+
 print(f"Registros en archivo SIN outliers: {df_sin_outliers_verif.shape[0]:,}")
-print(f"¿Coinciden los registros? {len(df_con_outliers) == df_con_outliers_verif.shape[0] and len(df_sin_outliers) == df_sin_outliers_verif.shape[0]}")
 
 # Mostrar estadísticas finales
 print(f"\n=== RESUMEN DE LIMPIEZA ===")
