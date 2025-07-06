@@ -9,7 +9,7 @@ print("=== ANÁLISIS INTELIGENTE DE OUTLIERS PARA NYC ===")
 
 # Cargar el dataset
 print("Cargando dataset...")
-df = pd.read_csv('2Database/1processed_data_complete.csv')
+df = pd.read_csv('2Database/data500k/puntos500k.csv')
 print(f"Dataset original: {df.shape}")
 
 # Definir límites amplios para toda la región metropolitana de NYC

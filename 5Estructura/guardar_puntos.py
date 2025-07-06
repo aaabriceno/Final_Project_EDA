@@ -11,7 +11,7 @@ import os
 import sys
 
 # CONFIGURACIÓN: Cambia este valor para la cantidad de puntos que quieres guardar
-CANTIDAD_PUNTOS = 3000000  # Cambia este número según necesites
+CANTIDAD_PUNTOS = 1500000  # Cambia este número según necesites
 
 def contar_lineas_archivo(archivo):
     """Cuenta las líneas del archivo de forma eficiente."""
@@ -61,17 +61,17 @@ def guardar_puntos():
         
         # Verificar que la cantidad solicitada no exceda el total
         if CANTIDAD_PUNTOS > total_puntos_archivo:
-            print(f"⚠️  ADVERTENCIA: Se solicitan {CANTIDAD_PUNTOS:,} puntos pero solo hay {total_puntos_archivo:,} disponibles.")
-            print(f"   Se guardarán todos los {total_puntos_archivo:,} puntos disponibles.")
+            print(f"ADVERTENCIA: Se solicitan {CANTIDAD_PUNTOS:,} puntos pero solo hay {total_puntos_archivo:,} disponibles.")
+            print(f"Se guardarán todos los {total_puntos_archivo:,} puntos disponibles.")
             cantidad_a_guardar = total_puntos_archivo
         else:
             cantidad_a_guardar = CANTIDAD_PUNTOS
-            print(f"✅ Se guardarán {cantidad_a_guardar:,} puntos como se solicitó.")
+            print(f"Se guardarán {cantidad_a_guardar:,} puntos como se solicitó.")
         
         print(f"Leyendo archivo en chunks para optimizar memoria...")
         
         # Leer el archivo en chunks para evitar problemas de memoria
-        chunk_size = 100000  # 100k líneas por chunk
+        chunk_size = CANTIDAD_PUNTOS  # 100k líneas por chunk
         puntos_guardados = 0
         primer_chunk = True
         
@@ -102,8 +102,8 @@ def guardar_puntos():
             del chunk
             del chunk_a_guardar
         
-        print(f"✅ Puntos guardados exitosamente en: {archivo_salida}")
-        print(f"📊 Información del archivo guardado:")
+        print(f"Puntos guardados exitosamente en: {archivo_salida}")
+        print(f"Información del archivo guardado:")
         print(f"   - Puntos guardados: {puntos_guardados:,}")
         print(f"   - Archivo de salida: {archivo_salida}")
         

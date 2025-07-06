@@ -16,6 +16,7 @@ RStarBoundingBox<2> createbox(int x, int y, int w, int h) {
     return box;
 }
 
+
 int main() {
     using namespace std;
 

@@ -25,7 +25,7 @@ try:
     print(f"Columnas: {list(df.columns)}")
 except FileNotFoundError:
     print("Archivo PCA no encontrado, usando datos limpios de NYC...")
-    df = pd.read_csv('2Database/2processed_data_complete_limpio.csv')
+    df = pd.read_csv('2Database/data500k/2processed_data_500k_limpio.csv')
     print(f"Dataset NYC limpio shape: {df.shape}")
     print(f"Columnas: {list(df.columns)}")
 
@@ -283,7 +283,7 @@ plt.text(0.1, 0.5, summary_text, fontsize=10, verticalalignment='center',
          bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue", alpha=0.8))
 
 plt.tight_layout()
-plt.savefig('3Preprocesamiento/img/analisis_geografico.png', dpi=300, bbox_inches='tight')
+plt.savefig('3Preprocesamiento/img/500k/analisis_geografico.png', dpi=300, bbox_inches='tight')
 plt.close()
 print("Análisis detallado guardado: analisis_geografico.png")
 
@@ -309,9 +309,9 @@ plt.ylabel('Latitud')
 plt.title('Clusters geográficos del dataframe')
 plt.legend()
 plt.tight_layout()
-plt.savefig('3Preprocesamiento/img/clusters_geograficos.png', dpi=200)
+plt.savefig('3Preprocesamiento/img/500k/clusters_geograficos.png', dpi=200)
 plt.close()
-print("Gráfico de clusters guardado en: 3Preprocesamiento/img/clusters_geograficos.png")
+print("Gráfico de clusters guardado en: 3Preprocesamiento/img/500k/clusters_geograficos.png")
 
 # Guardar dataset extendido con centroides
 # Crear DataFrame de centroides
@@ -321,5 +321,5 @@ if len(centroids_espacial) > 0:
     # Unir centroides a cada punto según su cluster
     df_clustered = df_clustered.merge(df_centroides, on='cluster_espacial', how='left')
     # Guardar el dataset extendido
-    df_clustered.to_csv('2Database/3clusterizacion_geografica_with_centroids.csv', index=False)
-    print("Archivo guardado: 2Database/3clusterizacion_geografica_with_centroids.csv") 
+    df_clustered.to_csv('2Database/data500k/3clusterizacion_geografica_with_centroids.csv', index=False)
+    print("Archivo guardado: 2Database/data500k/3clusterizacion_geografica_with_centroids.csv") 

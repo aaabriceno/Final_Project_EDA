@@ -10,7 +10,7 @@ pd.set_option('display.precision', 13)
 print("ANALIZANDO DATOS PARA IDENTIFICAR VALORES EXTRAÑOS")
 # Cargar el archivo de datos
 try:
-    df = pd.read_csv('2Database/1processed_data_complete.csv')
+    df = pd.read_csv('2Database/data500k/puntos500k.csv')
     print(f"Archivo cargado exitosamente: {df.shape[0]} filas, {df.shape[1]} columnas")
 except Exception as e:
     print(f"Error cargando archivo: {e}")
