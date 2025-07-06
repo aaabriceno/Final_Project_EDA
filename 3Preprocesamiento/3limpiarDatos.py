@@ -9,7 +9,7 @@ print("Limpieza de Datos")
 
 # Cargar archivo CSV original
 print("Cargar Archivo:")
-df = pd.read_csv('2Database/1processed_data_complete.csv')
+df = pd.read_csv('2Database/data500k/puntos500k.csv')
 print(f"Forma del dataset original: {df.shape}") #Tamano del dataframe (filas y columnas)
 print(f"Registros originales: {df.shape[0]:,}")
 
@@ -129,12 +129,12 @@ print(f"\n=== PASO 3: GUARDAR ARCHIVOS CSV ===")
 
 # Guardar archivo SIN outliers (solo NYC )
 print("Guardando archivo SIN outliers (solo NYC )...")
-df_sin_outliers.to_csv('2Database/2processed_data_complete_limpio.csv', index=False)
-print("Archivo guardado en '2Database/2processed_data_complete_limpio.csv'")
+df_sin_outliers.to_csv('2Database/data500k/2processed_data_500k_limpio.csv', index=False)
+print("Archivo guardado en '2Database/data500k/2processed_data_500k_limpio.csv'")
 
 # Verificar los archivos guardados
 print(f"\nVerificando archivos guardados...")
-df_sin_outliers_verif = pd.read_csv('2Database/2processed_data_complete_limpio.csv')
+df_sin_outliers_verif = pd.read_csv('2Database/data500k/2processed_data_500k_limpio.csv')
 
 
 print(f"Registros en archivo SIN outliers: {df_sin_outliers_verif.shape[0]:,}")

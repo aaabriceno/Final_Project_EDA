@@ -1,8 +1,8 @@
 import pandas as pd
 
 # Leer el archivo con los clusters y centroides
-input_file = '2Database/3clusterizacion_geografica_with_centroids.csv'
-output_file = '2Database/4clusterizacion_geografica_ordenada.csv'
+input_file = '2Database/data500k/3clusterizacion_geografica_with_centroids.csv'
+output_file = '2Database/data500k/4clusterizacion_geografica_ordenada.csv'
 
 print(f"Leyendo archivo: {input_file}")
 df = pd.read_csv(input_file)

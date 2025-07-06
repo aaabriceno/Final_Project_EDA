@@ -9,34 +9,50 @@
 #include <unordered_map>
 #include <iostream>
 #include <limits>
+#include <cassert>
+#include <memory>
 
 using namespace std;
-//PARAMETROS PARA 10M
-//M = sqrt(10000000)*0.5 = 500
-//m = M*0.4 = 200
 
-// Parámetros para 500,000 puntos
-// Cálculo: sqrt(500,000) * 0.5 = 353
-const int MAX_PUNTOS_POR_NODO = 1500; // Máximo de puntos por nodo (reducido para estabilidad)
-const int MIN_PUNTOS_POR_NODO = 720;  // Mínimo de puntos por nodo (40% del máximo)
+// PARÁMETROS OPTIMIZADOS (basados en el código de ayuda)
+// Código de ayuda usa: min=50, max=100
+const int MAX_PUNTOS_POR_NODO = 1200;  // Reducido de 2000 para mayor eficiencia
+const int MIN_PUNTOS_POR_NODO = 550;   // Reducido de 800 para mayor eficiencia
 const double PORCENTAJE_PARA_HACER_REINSERT = 0.3; // Para poder hacer reinsert
 
-
-//Estructura Punto
+//Estructura Punto optimizada
 struct Punto{
     int id;
     double latitud, longitud;
     vector <double> atributos; //10 atributos de cada punto/ 6-8 puntos con PCA
     int id_cluster_geografico, id_subcluster_atributivo;
     
-    // Constructor por defecto
-    Punto() : id(0), latitud(0.0), longitud(0.0), atributos({}) {}
+    // Constructor por defecto optimizado
+    Punto() : id(0), latitud(0.0), longitud(0.0), id_cluster_geografico(0), id_subcluster_atributivo(0) {}
 
     // Constructor para inicializar el punto
     Punto(int _id, double _lat, double _lon, const std::vector<double>& _atributos)
-        : id(_id), latitud(_lat), longitud(_lon), atributos(_atributos) {}
+        : id(_id), latitud(_lat), longitud(_lon), atributos(_atributos), id_cluster_geografico(0), id_subcluster_atributivo(0) {}
     
-        // Operador < para permitir ordenamiento
+    // Constructor de copia optimizado
+    Punto(const Punto& otro) : id(otro.id), latitud(otro.latitud), longitud(otro.longitud), 
+                               atributos(otro.atributos), id_cluster_geografico(otro.id_cluster_geografico), 
+                               id_subcluster_atributivo(otro.id_subcluster_atributivo) {}
+    
+    // Operador de asignación optimizado
+    Punto& operator=(const Punto& otro) {
+        if (this != &otro) {
+            id = otro.id;
+            latitud = otro.latitud;
+            longitud = otro.longitud;
+            atributos = otro.atributos;
+            id_cluster_geografico = otro.id_cluster_geografico;
+            id_subcluster_atributivo = otro.id_subcluster_atributivo;
+        }
+        return *this;
+    }
+    
+    // Operador < para permitir ordenamiento
     bool operator< (const Punto& otro_MBR) const {
         if (latitud != otro_MBR.latitud) {
             return latitud < otro_MBR.latitud;
@@ -46,14 +62,24 @@ struct Punto{
         }
         return id < otro_MBR.id;
     }
+    
+    // Método para optimizar memoria
+    void optimizarAtributos() {
+        if (atributos.size() > 8) {
+            atributos.resize(8); // Mantener solo los primeros 8 atributos
+        }
+    }
 };
 
-//Estructura MBR
+//Estructura MBR optimizada (basada en el código de ayuda)
 struct MBR{
     double m_minp[2]; // [latitud minima, longitud minima]
     double m_maxp[2]; // [latitud maxima, longitud maxima]
 
-    MBR(){}
+    MBR(){
+        reset();
+    }
+    
     MBR(double min_latitud, double min_longitud, double max_latitud, double max_longitud) {
         m_minp[0] = min_latitud; // latitud minima
         m_minp[1] = min_longitud; // longitud minima
@@ -66,7 +92,7 @@ struct MBR{
         m_maxp[0] = m_maxp[1] = std::numeric_limits<double>::lowest();
     }
 
-    // Método que uso para  estirar el MBR para incluir otro MBR
+    // Método optimizado para estirar el MBR
     void stretch(const MBR& otro_MBR) {
         m_minp[0] = std::min(m_minp[0], otro_MBR.m_minp[0]);
         m_minp[1] = std::min(m_minp[1], otro_MBR.m_minp[1]);
@@ -74,18 +100,39 @@ struct MBR{
         m_maxp[1] = std::max(m_maxp[1], otro_MBR.m_maxp[1]);
     }
 
-    // Método que uso para verificar si dos MBRs se intersectan
+    // Método optimizado para verificar intersección
     bool is_intersected(const MBR& otro_MBR) const {
         return !(m_maxp[0] < otro_MBR.m_minp[0] || m_maxp[1] < otro_MBR.m_minp[1] || 
                  m_minp[0] > otro_MBR.m_maxp[0] || m_minp[1] > otro_MBR.m_maxp[1]);
     }
+    
+    // Verificar si el MBR es válido
+    bool esValido() const {
+        return m_minp[0] <= m_maxp[0] && m_minp[1] <= m_maxp[1];
+    }
+    
+    // Método para calcular área (optimizado)
+    double area() const {
+        return (m_maxp[0] - m_minp[0]) * (m_maxp[1] - m_minp[1]);
+    }
+    
+    // Método para calcular margen (optimizado)
+    double margin() const {
+        return 2 * ((m_maxp[0] - m_minp[0]) + (m_maxp[1] - m_minp[1]));
+    }
+    
+    // Método para calcular overlap (optimizado)
+    double overlap(const MBR& otro_MBR) const {
+        double lat_overlap = std::max(0.0, std::min(m_maxp[0], otro_MBR.m_maxp[0]) - std::max(m_minp[0], otro_MBR.m_minp[0]));
+        double lon_overlap = std::max(0.0, std::min(m_maxp[1], otro_MBR.m_maxp[1]) - std::max(m_minp[1], otro_MBR.m_minp[1]));
+        return lat_overlap * lon_overlap;
+    }
 };
 
-//Estructura MicroCluster
+//Estructura MicroCluster optimizada
 struct MicroCluster{
     vector <double> centroId;
     double radio;  
-    //int cantidad;
     int id_cluster_geografico;    // ID del cluster geográfico
     int id_subcluster_atributivo; // ID del subcluster atributivo
     vector<Punto> puntos; //Puntos que pertenecen a este microcluster
@@ -93,9 +140,16 @@ struct MicroCluster{
     MicroCluster(vector<double> centro, double r, int id_cluster_geo, int id_subcluster)
         : centroId(centro), radio(r), id_cluster_geografico(id_cluster_geo), 
           id_subcluster_atributivo(id_subcluster) {}   
+    
+    // Método para optimizar memoria
+    void optimizarPuntos() {
+        if (puntos.size() > 1000) {
+            puntos.resize(1000); // Limitar puntos por microcluster
+        }
+    }
 };
 
-// Clase para matriz de similitud por nodo hoja
+// Clase para matriz de similitud por nodo hoja (optimizada)
 class MatrizSimilitudNodo {
     public:
         // Constructor
@@ -132,8 +186,13 @@ class MatrizSimilitudNodo {
             return -1.0;
         }
 
-        // Calcular similitud entre dos puntos (ahora público)
+        // Calcular similitud entre dos puntos (optimizado)
         static double calcularSimilitudPuntos(const Punto& p1, const Punto& p2) {
+            // Verificar que los puntos sean válidos
+            if (p1.atributos.empty() || p2.atributos.empty()) {
+                return 0.0;
+            }
+            
             // 1. Similitud por atributos PCA (40% del peso)
             double similitud_atributos = 0.0;
             double distancia = 0.0;
@@ -172,8 +231,13 @@ class MatrizSimilitudNodo {
             return similitud_final;
         }
 
-        // Calcular similitud avanzada que incluye proximidad geográfica
+        // Calcular similitud avanzada que incluye proximidad geográfica (optimizada)
         static double calcularSimilitudAvanzada(const Punto& p1, const Punto& p2) {
+            // Verificar que los puntos sean válidos
+            if (p1.atributos.empty() || p2.atributos.empty()) {
+                return 0.0;
+            }
+            
             // 1. Similitud por atributos PCA (35% del peso)
             double similitud_atributos = 0.0;
             double distancia = 0.0;
@@ -203,21 +267,21 @@ class MatrizSimilitudNodo {
                 similitud_subcluster = 0.0;
             }
             
-            // 4. Similitud por proximidad geográfica (15% del peso)
+            // 4. Similitud geográfica (15% del peso)
             double distancia_geo = sqrt(pow(p1.latitud - p2.latitud, 2) + pow(p1.longitud - p2.longitud, 2));
             double similitud_geografica = exp(-distancia_geo * 1000); // Factor de escala
             
-            // 5. Combinar todas las similitudes
+            // 5. Combinar similitudes con pesos
             double similitud_final = (0.35 * similitud_atributos) + 
                                    (0.25 * similitud_cluster_geo) + 
-                                   (0.25 * similitud_subcluster) +
+                                   (0.25 * similitud_subcluster) + 
                                    (0.15 * similitud_geografica);
             
             return similitud_final;
         }
 
     private:
-        // Para cada punto del nodo, lista ordenada de IDs más similares (del mismo nodo)
+        // Hash table: id_punto -> vector de ids ordenados por similitud
         unordered_map<int, vector<int>> ranking_similitud;
 };
 

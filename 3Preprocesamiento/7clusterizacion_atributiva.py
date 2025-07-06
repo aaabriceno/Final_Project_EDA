@@ -3,8 +3,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import MiniBatchKMeans
 
 # Leer el archivo ordenado
-input_file = '2Database/4clusterizacion_geografica_ordenada.csv'
-output_file = '2Database/5clusterizacion_geografica_attr.csv'
+input_file = '2Database/data500k/4clusterizacion_geografica_ordenada.csv'
+output_file = '2Database/data500k/5clusterizacion_geografica_attr.csv'
 
 print(f"Leyendo archivo: {input_file}")
 df = pd.read_csv(input_file)

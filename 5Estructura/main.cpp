@@ -700,7 +700,8 @@ int main() {
             }
         } 
         else if (opcion == 5) {
-            geoCluster.crearMicroclustersEnHojas();
+            cout << "✅ Los microclusters se crean automáticamente durante la inserción" << endl;
+            cout << "✅ No es necesario crearlos manualmente" << endl;
         } 
         else if (opcion == 6) {
             if (!datosCargados) { cout << "ERROR: No hay datos cargados" << endl; continue; }

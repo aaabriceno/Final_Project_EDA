@@ -8,7 +8,7 @@ print("=== VISUALIZACIÓN COMPLETA DE TODOS LOS PUNTOS CON DATASHADER ===")
 
 # Cargar el dataset completo
 print("Cargando datos completos de NYC...")
-df = pd.read_csv('2Database/2processed_data_complete_limpio.csv')
+df = pd.read_csv('2Database/datacomplete/2processed_data_complete_limpio.csv')
 print(f"Dataset shape: {df.shape}")
 
 # Definir el canvas (ajustar a NYC)
