@@ -11,7 +11,7 @@ import os
 import sys
 
 # CONFIGURACIÓN: Cambia este valor para la cantidad de puntos que quieres guardar
-CANTIDAD_PUNTOS = 1500000  # Cambia este número según necesites
+CANTIDAD_PUNTOS = 2000000  # Cambia este número según necesites
 
 def contar_lineas_archivo(archivo):
     """Cuenta las líneas del archivo de forma eficiente."""
