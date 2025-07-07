@@ -36,10 +36,39 @@ GeoCluster::~GeoCluster() {
     std::cout << "Destructor llamado" << std::endl;
 }
 
+// NUEVOS MÉTODOS PARA MANEJAR LA HASH TABLE DE PUNTOS COMPLETOS
+void GeoCluster::almacenarPuntoCompleto(const Punto& punto) {
+    puntos_completos[punto.id] = punto;
+}
+
+Punto GeoCluster::obtenerPuntoCompleto(int id_punto) const {
+    auto it = puntos_completos.find(id_punto);
+    if (it != puntos_completos.end()) {
+        return it->second;
+    }
+    // Retornar un punto vacío si no se encuentra
+    return Punto();
+}
+
+bool GeoCluster::existePuntoCompleto(int id_punto) const {
+    return puntos_completos.find(id_punto) != puntos_completos.end();
+}
+
+void GeoCluster::limpiarPuntosCompletos() {
+    puntos_completos.clear();
+}
+
+int GeoCluster::obtenerNumeroPuntosCompletos() const {
+    return puntos_completos.size();
+}
+
 void GeoCluster::inserData(const Punto& punto_a_insertar){
     // Optimizar atributos antes de insertar
     Punto punto_optimizado = punto_a_insertar;
     punto_optimizado.optimizarAtributos();
+    
+    // NUEVO: Almacenar el punto completo en la hash table
+    almacenarPuntoCompleto(punto_optimizado);
     
     niveles_reinsert.clear();
     insertar(punto_optimizado,0);
@@ -207,8 +236,8 @@ void GeoCluster::reinsert(Nodo* N, const Punto& punto) {
     */ 
     Punto centro = calcularCentroNodo(N);
     for (const auto& p : N->puntos) {
-        double dist = calcularDistancia(p, centro);
-        distancias.push_back({dist, p});
+        double dist = calcularDistancia(obtenerPuntoCompleto(p.id), centro);
+        distancias.push_back({dist, obtenerPuntoCompleto(p.id)});
     }
     
     // RI2: Ordenar por distancia
@@ -223,9 +252,11 @@ void GeoCluster::reinsert(Nodo* N, const Punto& punto) {
     }
     
     // Actualizar puntos en N (quedarse con los más cercanos)
-    vector<Punto> puntos_restantes;
+    vector<PointID> puntos_restantes;
     for (int i = p; i < distancias.size(); i++) {
-        puntos_restantes.push_back(distancias[i].second);
+        // NUEVO: Convertir Punto a PointID
+        PointID point_id(distancias[i].second);
+        puntos_restantes.push_back(point_id);
     }
     N->puntos = puntos_restantes;
     
@@ -250,9 +281,10 @@ Punto GeoCluster::calcularCentroNodo(Nodo* nodo) {
     double sumLat = 0.0, sumLon = 0.0;
     int count = 0;
     
-    for (const auto& punto : nodo->puntos) {
-        sumLat += punto.latitud;
-        sumLon += punto.longitud;
+    // NUEVO: Trabajar con PointID
+    for (const auto& point_id : nodo->puntos) {
+        sumLat += point_id.latitud;
+        sumLon += point_id.longitud;
         count++;
     }
     
@@ -313,7 +345,7 @@ void GeoCluster::Split(Nodo* nodo, Nodo*& nuevo_nodo) {
         return;
     }
     
-    vector<Punto> puntos = nodo->puntos;
+    vector<PointID> puntos = nodo->puntos; // NUEVO: Trabajar con PointID
     
     // Elegir eje de split (optimizado)
     int eje = chooseSplitAxis(puntos);
@@ -327,8 +359,8 @@ void GeoCluster::Split(Nodo* nodo, Nodo*& nuevo_nodo) {
     nuevo_nodo->padre = nodo->padre;
     
     // Distribuir puntos
-    vector<Punto> puntosNodoOriginal(puntos.begin(), puntos.begin() + splitIndex);
-    vector<Punto> puntosNuevoNodo(puntos.begin() + splitIndex, puntos.end());
+    vector<PointID> puntosNodoOriginal(puntos.begin(), puntos.begin() + splitIndex);
+    vector<PointID> puntosNuevoNodo(puntos.begin() + splitIndex, puntos.end());
     
     nodo->puntos = puntosNodoOriginal;
     nuevo_nodo->puntos = puntosNuevoNodo;
@@ -339,6 +371,29 @@ void GeoCluster::Split(Nodo* nodo, Nodo*& nuevo_nodo) {
 }
 
 int GeoCluster::chooseSplitAxis(const vector<Punto>& puntos) {
+    // Verificar que haya suficientes puntos
+    if (puntos.size() < 2) {
+        return 0; // Default a latitud
+    }
+    
+    // Crear MBRs para latitud y longitud (optimizado)
+    MBR mbrLatitud, mbrLongitud;
+    
+    for (const auto& punto : puntos) {
+        mbrLatitud.m_minp[0] = min(mbrLatitud.m_minp[0], punto.latitud);
+        mbrLatitud.m_maxp[0] = max(mbrLatitud.m_maxp[0], punto.latitud);
+        mbrLongitud.m_minp[1] = min(mbrLongitud.m_minp[1], punto.longitud);
+        mbrLongitud.m_maxp[1] = max(mbrLongitud.m_maxp[1], punto.longitud);
+    }
+    
+    double margenLat = mbrLatitud.margin();
+    double margenLong = mbrLongitud.margin();
+
+    return (margenLat < margenLong) ? 0 : 1;
+}
+
+// NUEVA: Función para elegir eje de split con PointID
+int GeoCluster::chooseSplitAxis(const vector<PointID>& puntos) {
     // Verificar que haya suficientes puntos
     if (puntos.size() < 2) {
         return 0; // Default a latitud
@@ -426,6 +481,73 @@ int GeoCluster::chooseSplitIndex(vector<Punto>& puntos, int eje) {
     return bestSplitIndex;
 }
 
+// NUEVA: Función para elegir índice de split con PointID
+int GeoCluster::chooseSplitIndex(vector<PointID>& puntos, int eje) {
+    // Verificar que haya suficientes puntos
+    if (puntos.size() < 2) {
+        return 1;
+    }
+    
+    int M = puntos.size();
+    int m = MIN_PUNTOS_POR_NODO;
+
+    if (eje == 0) {
+        sort(puntos.begin(), puntos.end(), [](const PointID& p1, const PointID& p2) {
+            return p1.latitud < p2.latitud;
+        });
+    } else {
+        sort(puntos.begin(), puntos.end(), [](const PointID& p1, const PointID& p2) {
+            return p1.longitud < p2.longitud;
+        });
+    }
+
+    int numero_de_distribuciones = M - 2 * m + 2;
+    if (numero_de_distribuciones <= 0) {
+        return m; // Fallback
+    }
+    
+    double minOverlap = numeric_limits<double>::infinity();
+    double minMargen = numeric_limits<double>::infinity();
+    double minArea = numeric_limits<double>::infinity();
+    int bestSplitIndex = m;
+
+    for (int i = 0; i < numero_de_distribuciones; ++i) {
+        int grupo1_size = m + i;
+        
+        if (grupo1_size >= puntos.size()) break;
+        
+        vector<PointID> grupo1(puntos.begin(), puntos.begin() + grupo1_size);
+        vector<PointID> grupo2(puntos.begin() + grupo1_size, puntos.end());
+
+        MBR mbrGrupo1 = calcularMBR(grupo1);
+        MBR mbrGrupo2 = calcularMBR(grupo2);
+
+        double overlap = mbrGrupo1.overlap(mbrGrupo2);
+        double margen = mbrGrupo1.margin() + mbrGrupo2.margin();
+        double area = mbrGrupo1.area() + mbrGrupo2.area();
+
+        if (overlap < minOverlap) {
+            minOverlap = overlap;
+            bestSplitIndex = grupo1_size;
+            minMargen = margen;
+            minArea = area;
+        } else if (overlap == minOverlap) {
+            if (margen < minMargen) {
+                minMargen = margen;
+                bestSplitIndex = grupo1_size;
+                minArea = area;
+            } else if (margen == minMargen) {
+                if (area < minArea) {
+                    minArea = area;
+                    bestSplitIndex = grupo1_size;
+                }
+            }
+        }
+    }
+
+    return bestSplitIndex;
+}
+
 void GeoCluster::insertIntoLeafNode(Nodo* nodo_hoja, const Punto& punto) {
     // Verificar que el nodo sea válido
     if (nodo_hoja == nullptr) {
@@ -439,7 +561,9 @@ void GeoCluster::insertIntoLeafNode(Nodo* nodo_hoja, const Punto& punto) {
         return;
     }
     
-    nodo_hoja->puntos.push_back(punto);
+    // NUEVO: Convertir Punto a PointID para ahorrar memoria
+    PointID point_id(punto);
+    nodo_hoja->puntos.push_back(point_id);
     updateMBR(nodo_hoja);
 }
 
@@ -470,6 +594,7 @@ void GeoCluster::updateMBR(Nodo* nodo) {
         if (nodo->puntos.empty()) {
             nodo->mbr.reset();
         } else {
+            // NUEVO: Usar la función que trabaja con PointID
             nodo->mbr = calcularMBR(nodo->puntos);
         }
     } else {
@@ -506,6 +631,14 @@ bool GeoCluster::estaDentroDelMBR(const Punto& punto, const MBR& mbr) {
     return dentroLatitud && dentroLongitud;
 }
 
+// NUEVA: Función para verificar si un PointID está dentro del MBR
+bool GeoCluster::estaDentroDelMBR(const PointID& point_id, const MBR& mbr) {
+    bool dentroLatitud = (point_id.latitud >= mbr.m_minp[0] && point_id.latitud <= mbr.m_maxp[0]);
+    bool dentroLongitud = (point_id.longitud >= mbr.m_minp[1] && point_id.longitud <= mbr.m_maxp[1]);
+
+    return dentroLatitud && dentroLongitud;
+}
+
 bool GeoCluster::interseccionMBR(const MBR& mbr1, const MBR& mbr2) {
     return mbr1.is_intersected(mbr2);
 }
@@ -534,10 +667,14 @@ vector<Punto> GeoCluster::buscarPuntosDentroInterseccion(const MBR& rango, Nodo*
     // Si es hoja, verificar cada punto
     if (nodo->esHoja) {
         cout << "[DEBUG] Es nodo hoja con " << nodo->puntos.size() << " puntos" << endl;
-        for (const auto& punto : nodo->puntos) {
-            if (punto.latitud >= rango.m_minp[0] && punto.latitud <= rango.m_maxp[0] &&
-                punto.longitud >= rango.m_minp[1] && punto.longitud <= rango.m_maxp[1]) {
-                puntos_encontrados.push_back(punto);
+        for (const auto& point_id : nodo->puntos) {
+            if (point_id.latitud >= rango.m_minp[0] && point_id.latitud <= rango.m_maxp[0] &&
+                point_id.longitud >= rango.m_minp[1] && point_id.longitud <= rango.m_maxp[1]) {
+                // NUEVO: Recuperar el punto completo de la hash table
+                Punto punto_completo = obtenerPuntoCompleto(point_id.id);
+                if (punto_completo.id != 0) { // Verificar que se encontró el punto
+                    puntos_encontrados.push_back(punto_completo);
+                }
             }
         }
         cout << "[DEBUG] Encontrados " << puntos_encontrados.size() << " puntos en este nodo hoja" << endl;
@@ -557,9 +694,13 @@ vector<Punto> GeoCluster::buscarPuntosDentroInterseccion(const MBR& rango, Nodo*
 void GeoCluster::searchRec(const MBR& rango, Nodo* nodo, vector<Punto>& puntos_similares) {
     if (interseccionMBR(nodo->mbr, rango)) {
         if (nodo->esHoja) {
-            for (const auto& punto : nodo->puntos) {
-                if (estaDentroDelMBR(punto, rango)) {
-                    puntos_similares.push_back(punto);
+            for (const auto& point_id : nodo->puntos) {
+                if (estaDentroDelMBR(point_id, rango)) {
+                    // NUEVO: Recuperar el punto completo de la hash table
+                    Punto punto_completo = obtenerPuntoCompleto(point_id.id);
+                    if (punto_completo.id != 0) { // Verificar que se encontró el punto
+                        puntos_similares.push_back(punto_completo);
+                    }
                 }
             }
         } else {
@@ -567,26 +708,6 @@ void GeoCluster::searchRec(const MBR& rango, Nodo* nodo, vector<Punto>& puntos_s
                 searchRec(rango, hijo, puntos_similares);
             }
         }
-    }
-}
-
-int GeoCluster::contarPuntosEnArbol(Nodo* nodo) {
-    if (nodo == nullptr) {
-        nodo = raiz;
-    }
-    
-    if (nodo == nullptr) {
-        return 0;
-    }
-    
-    if (nodo->esHoja) {
-        return nodo->puntos.size();
-    } else {
-        int total = 0;
-        for (Nodo* hijo : nodo->hijos) {
-            total += contarPuntosEnArbol(hijo);
-        }
-        return total;
     }
 }
 
@@ -620,6 +741,13 @@ void GeoCluster::imprimirArbol(Nodo* nodo, int nivel) {
             }
         }
     }
+}
+
+
+void GeoCluster::imprimirArbol() {
+    cout << "\n=== ESTRUCTURA DEL R*-TREE ===" << endl;
+    imprimirArbol(raiz, 0);
+    cout << "================================\n" << endl;
 }
 
 // ============================================================================
@@ -726,6 +854,8 @@ double GeoCluster::calcularSimilitudOptimizada(const Punto& p1, const Punto& p2)
     return (0.5 * similitud_atributos) + (0.3 * similitud_cluster) + (0.2 * similitud_subcluster);
 }
 
+
+
 vector<vector<Punto>> GeoCluster::grupos_similares_de_puntos(MBR& rango) {
     vector<vector<Punto>> grupos_resultado;
     
@@ -741,8 +871,11 @@ vector<vector<Punto>> GeoCluster::grupos_similares_de_puntos(MBR& rango) {
         
         // Agrupar por subclusters
         unordered_map<int, vector<Punto>> grupos_por_subcluster;
-        for (const auto& punto : nodo->puntos) {
-            grupos_por_subcluster[punto.id_subcluster_atributivo].push_back(punto);
+        for (const auto& point_id : nodo->puntos) {
+            Punto punto_completo = obtenerPuntoCompleto(point_id.id);
+            if (punto_completo.id != 0) { // Verificar que se encontró el punto
+                grupos_por_subcluster[punto_completo.id_subcluster_atributivo].push_back(punto_completo);
+            }
         }
         
         // Convertir a vector de vectores
@@ -944,7 +1077,9 @@ void GeoCluster::crearMicroclustersEnNodoHoja(Nodo* nodo_hoja) {
     // Usar una clave compuesta: "cluster_geo_subcluster_attr"
     unordered_map<string, vector<Punto>> puntos_por_microcluster;
     
-    for (const auto& punto : nodo_hoja->puntos) {
+    for (const auto& point_id : nodo_hoja->puntos) {
+        // Recuperar el punto completo de la hash table
+        Punto punto = obtenerPuntoCompleto(point_id.id);
         // Crear clave combinada: cluster_geografico + "_" + subcluster_atributivo
         string clave_microcluster = to_string(punto.id_cluster_geografico) + "_" + 
                                    to_string(punto.id_subcluster_atributivo);
@@ -1025,137 +1160,12 @@ double GeoCluster::calcularDistanciaAtributos(const vector<double>& centro, cons
 // ============================================================================
 
 // ============================================================================
-// IMPLEMENTACIÓN DE MATRIZ SIMILITUD POR NODO
+// FUNCIONES AUXILIARES OPTIMIZADAS
 // ============================================================================
 
-void MatrizSimilitudNodo::calcularSimilitudNodo(const vector<Punto>& puntos_nodo) {
-    // cout << "  Calculando matriz de similitud para " << puntos_nodo.size() << " puntos..." << endl;
-    
-    ranking_similitud.clear();
-    
-    // Para cada punto, calcular similitud con todos los demás
-    for (size_t i = 0; i < puntos_nodo.size(); i++) {
-        vector<pair<double, int>> similitudes; // (similitud, id_punto)
-        
-        for (size_t j = 0; j < puntos_nodo.size(); j++) {
-            if (i != j) { // No comparar consigo mismo
-                double similitud = calcularSimilitudPuntos(puntos_nodo[i], puntos_nodo[j]);
-                similitudes.push_back({similitud, puntos_nodo[j].id});
-            }
-        }
-        
-        // Ordenar por similitud (mayor primero)
-        sort(similitudes.begin(), similitudes.end(), 
-             [](const pair<double, int>& a, const pair<double, int>& b) {
-                 return a.first > b.first;
-             });
-        
-        // Guardar solo los IDs ordenados
-        vector<int> ranking_ids;
-        for (const auto& [similitud, id] : similitudes) {
-            ranking_ids.push_back(id);
-        }
-        
-        ranking_similitud[puntos_nodo[i].id] = ranking_ids;
-    }
-    
-    // cout << "  ✅ Matriz de similitud calculada para " << ranking_similitud.size() << " puntos" << endl;
-}
-
-vector<Punto> MatrizSimilitudNodo::obtenerSimilaresNodo(int punto_id, int n_similares, const vector<Punto>& puntos_nodo) {
-    vector<Punto> resultado;
-    
-    // Buscar el ranking del punto
-    auto it = ranking_similitud.find(punto_id);
-    if (it == ranking_similitud.end()) {
-        return resultado; // Punto no encontrado
-    }
-    
-    const vector<int>& ranking = it->second;
-    int n_obtener = min(n_similares, (int)ranking.size());
-    
-    // Crear mapa de IDs para búsqueda rápida
-    unordered_map<int, Punto> mapa_puntos;
-    for (const auto& punto : puntos_nodo) {
-        mapa_puntos[punto.id] = punto;
-    }
-    
-    // Obtener los N puntos más similares
-    for (int i = 0; i < n_obtener; i++) {
-        int id_similar = ranking[i];
-        auto punto_it = mapa_puntos.find(id_similar);
-        if (punto_it != mapa_puntos.end()) {
-            resultado.push_back(punto_it->second);
-        }
-    }
-    
-    return resultado;
-}
-
-vector<Punto> MatrizSimilitudNodo::obtenerSimilaresEnRangoNodo(int punto_id, const MBR& rango, int n_similares, const vector<Punto>& puntos_nodo) {
-    vector<Punto> resultado;
-    
-    // Buscar el ranking del punto
-    auto it = ranking_similitud.find(punto_id);
-    if (it == ranking_similitud.end()) {
-        return resultado; // Punto no encontrado
-    }
-    
-    const vector<int>& ranking = it->second;
-    
-    // Crear mapa de IDs para búsqueda rápida
-    unordered_map<int, Punto> mapa_puntos;
-    for (const auto& punto : puntos_nodo) {
-        mapa_puntos[punto.id] = punto;
-    }
-    
-    // Verificar cada punto en el ranking si está en el rango
-    for (int id_similar : ranking) {
-        auto punto_it = mapa_puntos.find(id_similar);
-        if (punto_it != mapa_puntos.end()) {
-            const Punto& punto = punto_it->second;
-            
-            // Verificar si está en el rango
-            if (punto.latitud >= rango.m_minp[0] && punto.latitud <= rango.m_maxp[0] &&
-                punto.longitud >= rango.m_minp[1] && punto.longitud <= rango.m_maxp[1]) {
-                resultado.push_back(punto);
-                
-                if (resultado.size() >= n_similares) {
-                    break;
-                }
-            }
-        }
-    }
-    
-    return resultado;
-}
-
 // ============================================================================
-// FUNCIONES AUXILIARES PARA MATRICES DE SIMILITUD
+// FUNCIONES AUXILIARES OPTIMIZADAS
 // ============================================================================
-
-void GeoCluster::calcularMatricesSimilitudEnHojas() {
-    cout << "\n🔬 Calculando matrices de similitud en todas las hojas..." << endl;
-    calcularMatricesSimilitudRec(raiz);
-    cout << "Matrices de similitud calculadas en todas las hojas" << endl;
-}
-
-void GeoCluster::calcularMatricesSimilitudRec(Nodo* nodo) {
-    if (nodo == nullptr) return;
-    
-    if (nodo->esHoja) {
-        // Calcular matriz de similitud para este nodo hoja
-        if (!nodo->puntos.empty()) {
-            // cout << "  Nodo hoja nivel " << nodo->m_nivel << ": " << nodo->puntos.size() << " puntos" << endl;
-            nodo->matriz_similitud.calcularSimilitudNodo(nodo->puntos);
-        }
-    } else {
-        // Recursión para nodos internos
-        for (Nodo* hijo : nodo->hijos) {
-            calcularMatricesSimilitudRec(hijo);
-        }
-    }
-}
 
 Nodo* GeoCluster::encontrarNodoHoja(const Punto& punto) {
     if (raiz == nullptr) return nullptr;
@@ -1275,3 +1285,76 @@ MBR GeoCluster::calcularMBR(const vector<Punto>& puntos) {
     return MBR(minLat, minLon, maxLat, maxLon);
 }
 
+// NUEVA: Función para calcular MBR con PointID
+MBR GeoCluster::calcularMBR(const vector<PointID>& puntos) {
+    if (puntos.empty()) {
+        return MBR();
+    }
+    
+    double minLat = puntos[0].latitud, maxLat = puntos[0].latitud;
+    double minLon = puntos[0].longitud, maxLon = puntos[0].longitud;
+    
+    for (const auto& punto : puntos) {
+        minLat = std::min(minLat, punto.latitud);
+        minLon = std::min(minLon, punto.longitud);
+        maxLat = std::max(maxLat, punto.latitud);
+        maxLon = std::max(maxLon, punto.longitud);
+    }
+
+    return MBR(minLat, minLon, maxLat, maxLon);
+}
+
+// ============================================================================
+// NUEVAS FUNCIONES OPTIMIZADAS POR SIMILITUD DE CLUSTER
+// ============================================================================
+
+vector<Punto> GeoCluster::buscarPuntosPorSimilitudCluster(const Punto& punto_referencia, const MBR& rango, int n_puntos) {
+    vector<Punto> resultado;
+    
+    // Buscar todos los puntos en el rango
+    vector<Punto> puntos_en_rango = buscarPuntosDentroInterseccion(rango, raiz);
+    if (puntos_en_rango.empty()) {
+        return resultado;
+    }
+    
+    // Listas por prioridad
+    vector<Punto> lista1, lista2, lista3;
+    for (const auto& punto : puntos_en_rango) {
+        if (punto.id == punto_referencia.id) continue; // Excluir el punto de referencia
+        if (punto.id_cluster_geografico == punto_referencia.id_cluster_geografico &&
+            punto.id_subcluster_atributivo == punto_referencia.id_subcluster_atributivo) {
+            lista1.push_back(punto);
+        } else if (punto.id_cluster_geografico == punto_referencia.id_cluster_geografico) {
+            lista2.push_back(punto);
+        } else {
+            lista3.push_back(punto);
+        }
+    }
+    // Concatenar listas en orden de prioridad
+    vector<Punto> candidatos;
+    for (const auto& p : lista1) candidatos.push_back(p);
+    for (const auto& p : lista2) candidatos.push_back(p);
+    for (const auto& p : lista3) candidatos.push_back(p);
+    // Limitar a N candidatos
+    if ((int)candidatos.size() > n_puntos) {
+        candidatos.resize(n_puntos);
+    }
+    // Calcular distancia euclidiana solo para los N candidatos
+    struct PuntoDist {
+        Punto punto;
+        double dist;
+        PuntoDist(const Punto& p, double d) : punto(p), dist(d) {}
+        bool operator<(const PuntoDist& o) const { return dist < o.dist; }
+    };
+    vector<PuntoDist> ordenados;
+    for (const auto& p : candidatos) {
+        double d = sqrt(pow(p.latitud - punto_referencia.latitud, 2) + pow(p.longitud - punto_referencia.longitud, 2));
+        ordenados.emplace_back(p, d);
+    }
+    sort(ordenados.begin(), ordenados.end());
+    // Retornar los N más cercanos
+    for (const auto& pd : ordenados) {
+        resultado.push_back(pd.punto);
+    }
+    return resultado;
+}
