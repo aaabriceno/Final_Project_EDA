@@ -3,3 +3,6 @@
 
 # Ignorar todos los archivos EXE
 *.exe
+
+# Ignorar configuracion de vscode
+!.vscode/
