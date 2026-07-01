@@ -6,3 +6,6 @@
 
 # Ignorar configuracion de vscode
 !.vscode/
+
+#Ignorar los .csv
+*.csv
