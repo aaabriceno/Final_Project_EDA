@@ -9,3 +9,15 @@
 
 #Ignorar los .csv
 *.csv
+
+# Binarios compilados y objetos
+5Estructura/geocluster
+5Estructura/tests/test_rstar
+*.o
+*.bin
+
+# Archivos de lock de LibreOffice
+.~lock.*
+
+# Paper con copyright (ACM) - mantener solo local
+rstar-tree.pdf

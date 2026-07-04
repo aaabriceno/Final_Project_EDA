@@ -14,10 +14,16 @@
 
 using namespace std;
 
-// PARÁMETROS OPTIMIZADOS (basados en el código de ayuda)
-// Código de ayuda usa: min=50, max=100
-const int MAX_PUNTOS_POR_NODO = 1200;  // Reducido de 2000 para mayor eficiencia
-const int MIN_PUNTOS_POR_NODO = 550;   // Reducido de 800 para mayor eficiencia
+// Parámetros M y m del R*-tree (paper: 2 <= m <= M/2, mejor rendimiento con m = 40% de M)
+// Sobreescribibles en compilación (-DGEO_MAX_ENTRIES=8) para tests con nodos pequeños
+#ifndef GEO_MAX_ENTRIES
+#define GEO_MAX_ENTRIES 1200
+#endif
+#ifndef GEO_MIN_ENTRIES
+#define GEO_MIN_ENTRIES 480   /* 40% de M: el valor con mejor rendimiento en el paper */
+#endif
+const int MAX_PUNTOS_POR_NODO = GEO_MAX_ENTRIES;
+const int MIN_PUNTOS_POR_NODO = GEO_MIN_ENTRIES;
 const double PORCENTAJE_PARA_HACER_REINSERT = 0.3; // Para poder hacer reinsert
 
 //Estructura Punto optimizada
@@ -74,7 +80,8 @@ struct Punto{
 // NUEVA: Estructura PointID optimizada para memoria
 struct PointID {
     int id;                    // ID único del punto
-    double latitud, longitud;  // Coordenadas geográficas
+    double latitud; 
+    double longitud;  // Coordenadas geográficas
     int id_cluster_geografico; // ID del cluster geográfico
     int id_subcluster_atributivo; // ID del subcluster atributivo
     
@@ -322,15 +329,22 @@ struct BusquedaOptimizada {
 
 struct Nodo{
     bool esHoja;
-    int m_nivel;
+    int m_nivel;   // 0 = hoja; los internos llevan nivel de hijo + 1
     MBR mbr;
-    vector<Nodo*> hijos;  
+    vector<Nodo*> hijos;
     vector<PointID> puntos; //Solo para las hojas - OPTIMIZADO: usar PointID en lugar de Punto
     vector<MicroCluster> microclusters_en_Hoja; //Solo para las hojas
     Nodo* padre; //Puntero al padre
     Nodo(bool esHoja = false) : esHoja(esHoja), m_nivel(0), padre(nullptr) {}
-};
 
+    // Libera todo el subárbol (antes solo se liberaba la raíz: fuga de memoria)
+    ~Nodo() {
+        for (Nodo* hijo : hijos) delete hijo;
+    }
+    // Nodos poseen a sus hijos: prohibir copias para evitar dobles delete
+    Nodo(const Nodo&) = delete;
+    Nodo& operator=(const Nodo&) = delete;
+};
 
 class GeoCluster {
     private:
@@ -341,6 +355,9 @@ class GeoCluster {
     public:
         GeoCluster();
         ~GeoCluster();
+
+        // Acceso de solo lectura a la raíz (recorridos externos: tests, estadísticas)
+        Nodo* obtenerRaiz() const { return raiz; }
         
         // MÉTODOS PRINCIPALES
         void inserData(const Punto& punto);
@@ -387,35 +404,21 @@ class GeoCluster {
         void crearMicroclustersEnNodoHoja(Nodo* nodo_hoja);
         double calcularDistanciaAtributos(const vector<double>& centro, const vector<double>& atributos);
         
-        // FUNCIONES DE ÁRBOL R*
-        Nodo* chooseSubTree(Nodo* N,const Punto punto, int nivel);
-        double calcularCostoOverlap(const MBR& mbr, const Punto& punto);
-        double calcularCostoDeAmpliacionArea(const MBR& mbr, const Punto& punto);
-        double calcularMBRArea(const MBR& mbr);
-        bool OverFlowTreatment(Nodo*N, const Punto& punto, int nivel);   
-        void reinsert(Nodo* N, const Punto& punto);
-        Punto calcularCentroNodo(Nodo* nodo);
-        double calcularDistancia(const Punto& p1, const Punto& p2);
-        void propagateSplit(Nodo* nodo_original, Nodo* nuevo_nodo);
-        void Split(Nodo* nodo, Nodo*& nuevo_nodo);
-        int chooseSplitAxis(const vector<Punto>& puntos);
-        int chooseSplitAxis(const vector<PointID>& puntos); // NUEVA: Para PointID
-        double calcularMargen(const MBR& mbr);
-        int chooseSplitIndex(vector<Punto>& puntos, int eje);
-        int chooseSplitIndex(vector<PointID>& puntos, int eje); // NUEVA: Para PointID
-        double calcularOverlap(const MBR& mbr1, const MBR& mbr2);
-        Nodo* findBestLeafNode(const Punto& punto);
-        void insertIntoLeafNode(Nodo* nodo_hoja, const Punto& punto);
-        void insertIntoParent(Nodo* padre, Nodo* nuevo_nodo);
+        // FUNCIONES DE ÁRBOL R* (Beckmann et al. 1990, sección 4)
+        Nodo* chooseSubTree(const MBR& entrada, int nivel_destino);        // 4.1 CS1-CS3
+        Nodo* hijoConMenorAmpliacionArea(Nodo* N, const MBR& entrada);
+        Nodo* hijoConMenorAmpliacionOverlap(Nodo* N, const MBR& entrada);
+        void overflowTreatment(Nodo* N);                                   // 4.3 OT1
+        void reinsertar(Nodo* N);                                          // 4.3 RI1-RI4 (close reinsert)
+        void split(Nodo* N);                                               // 4.2 S1-S3 + propagación I3
+        void ajustarMBRHaciaArriba(Nodo* N);                               // I4
+        void insertarSubarbol(Nodo* subarbol);                             // reinserción en niveles internos
+        int chooseSplitAxis(const vector<PointID>& puntos);                // 4.2 CSA (expuesto para tests)
         void updateMBR(Nodo* nodo);
         bool interseccionMBR(const MBR& mbr1, const MBR& mbr2);
         void searchRec(const MBR& rango, Nodo* nodo, vector<Punto>& puntos_similares);
-        MBR computeMBR(double ax1, double ay1, double ax2, double ay2,
-                   double bx1, double by1, double bx2, double by2);
         bool estaDentroDelMBR(const Punto& punto, const MBR& mbr);
         bool estaDentroDelMBR(const PointID& point_id, const MBR& mbr); // NUEVA: Para PointID
-        double computeArea(double ax1, double ay1, double ax2, double ay2,
-                      double bx1, double by1, double bx2, double by2);
         
         // FUNCIONES DE SIMILITUD
         double calcularSimilitudAtributos(const Punto& p1, const Punto& p2);

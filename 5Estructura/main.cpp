@@ -1,4 +1,4 @@
-#include "GeoCluster.cpp"
+#include "GeoCluster.h"
 #include <vector>
 #include <algorithm>
 #include <fstream>
