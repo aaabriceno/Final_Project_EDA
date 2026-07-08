@@ -10,9 +10,10 @@
 #Ignorar los .csv
 *.csv
 
-# Binarios compilados y objetos
-5Estructura/geocluster
-5Estructura/tests/test_rstar
+# Binarios compilados y objetos (en cualquier carpeta)
+geocluster
+test_rstar
+test_rstarlib
 *.o
 *.bin
 
