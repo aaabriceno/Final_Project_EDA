@@ -85,12 +85,45 @@ static void test_invariantes() {
     CHECK(arbol.tamano() == 500, "tamano correcto");
 }
 
+static void test_knn() {
+    cout << "\nT5: kVecinos vs fuerza bruta" << endl;
+    RStarTree2D<int> arbol(8, 3);
+    vector<pair<double,double>> pts;
+    unsigned semilla = 12345;
+    auto rnd = [&]() {
+        semilla = semilla * 1103515245u + 12345u;
+        return ((semilla >> 8) % 100000) / 100000.0;   // 5 decimales: sin empates practicos
+    };
+    for (int i = 0; i < 300; i++) {
+        double x = rnd(), y = rnd();
+        pts.push_back({x, y});
+        arbol.insertar(x, y, i);
+    }
+    double qx = 0.5, qy = 0.5;
+    auto knn = arbol.kVecinos(qx, qy, 10);
+    vector<pair<double,int>> fb;   // fuerza bruta
+    for (int i = 0; i < 300; i++) {
+        double dx = pts[i].first - qx, dy = pts[i].second - qy;
+        fb.push_back({dx*dx + dy*dy, i});
+    }
+    sort(fb.begin(), fb.end());
+    CHECK(knn.size() == 10, "devuelve k resultados");
+    bool iguales = true;
+    for (int i = 0; i < 10; i++)
+        if (arbol.dato(knn[i].idx) != fb[i].second) iguales = false;
+    CHECK(iguales, "los 10 vecinos coinciden con fuerza bruta, en orden");
+    CHECK(arbol.kVecinos(qx, qy, 0).empty(), "k=0 devuelve vacio");
+    auto todos = arbol.kVecinos(qx, qy, 999);
+    CHECK(todos.size() == 300, "k > n devuelve todos");
+}
+
 int main() {
     cout << "=== Tests rstarLib ===" << endl;
     test_caja();
     test_esqueleto();
     test_rango_y_recorrido();
     test_invariantes();
+    test_knn();
     cout << "\n=== Resultado: " << (fallos == 0 ? "TODOS PASAN" : to_string(fallos) + " FALLOS") << " ===" << endl;
     return fallos == 0 ? 0 : 1;
 }

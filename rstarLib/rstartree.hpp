@@ -86,6 +86,43 @@ public:
         recorrerRec(raiz_, visita);
     }
 
+    // k vecinos mas cercanos a (x, y), ordenados de mas cercano a mas lejano.
+    // Best-first sobre los MBRs con poda por el peor de los k hallados.
+    std::vector<Resultado> kVecinos(double x, double y, int k) const {
+        std::vector<Resultado> res;
+        if (raiz_ == nullptr || k <= 0) return res;
+
+        using ItemN = std::pair<double, const Nodo*>;   // {dist2 minima al MBR, nodo}
+        auto cmpN = [](const ItemN& a, const ItemN& b) { return a.first > b.first; };
+        std::priority_queue<ItemN, std::vector<ItemN>, decltype(cmpN)> nodos(cmpN);
+        nodos.push({raiz_->mbr.dist2A(x, y), raiz_});
+
+        using ItemP = std::pair<double, Resultado>;     // max-heap de los mejores k
+        auto cmpP = [](const ItemP& a, const ItemP& b) { return a.first < b.first; };
+        std::priority_queue<ItemP, std::vector<ItemP>, decltype(cmpP)> mejores(cmpP);
+
+        while (!nodos.empty()) {
+            auto [d2, n] = nodos.top();
+            nodos.pop();
+            if ((int)mejores.size() == k && d2 > mejores.top().first) break;   // poda
+            if (n->esHoja) {
+                for (const auto& e : n->entradas) {
+                    double dx = e.x - x, dy = e.y - y, dd = dx * dx + dy * dy;
+                    if ((int)mejores.size() < k) mejores.push({dd, e});
+                    else if (dd < mejores.top().first) { mejores.pop(); mejores.push({dd, e}); }
+                }
+            } else {
+                for (const Nodo* h : n->hijos) nodos.push({h->mbr.dist2A(x, y), h});
+            }
+        }
+        res.resize(mejores.size());
+        for (int i = (int)mejores.size() - 1; i >= 0; i--) {
+            res[i] = mejores.top().second;
+            mejores.pop();
+        }
+        return res;
+    }
+
     // Inspeccion estructural (tests, estadisticas):
     // f(esHoja, nivel, profundidad, mbr, nEntradas, nHijos, esRaiz)
     void inspeccionar(const std::function<void(bool, int, int, const Caja&, size_t, size_t, bool)>& f) const {
