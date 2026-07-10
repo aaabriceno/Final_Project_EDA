@@ -240,6 +240,42 @@ static void test_grupos() {
     CHECK(total2 == 61, "grupo rearmado perezosamente tras insercion");
 }
 
+static void test_n_similares() {
+    cout << "\nT10: nSimilares" << endl;
+    RStarTree2D<Viaje> arbol(8, 3);
+    // 30 puntos dentro del futuro bbox [0, 0.5]:
+    //   10 etiqueta 0 (pcs {0}), 10 etiqueta 1 (pcs {5}), 10 etiqueta 2 (pcs {9})
+    int id = 0;
+    for (int e = 0; e < 3; e++)
+        for (int i = 0; i < 10; i++)
+            arbol.insertar(0.015 * (e * 10 + i), 0.0, Viaje{id++, e, {e == 2 ? 9.0 : e * 5.0}});
+    // referente: etiqueta 1, pcs {5}, FUERA del bbox (x=2.0)
+    uint32_t ref = arbol.insertar(2.0, 2.0, Viaje{999, 1, {5.0}});
+
+    GruposPorHoja<Viaje, int> grupos(arbol,
+        [](const Viaje& v) { return v.etiqueta; },
+        [](const Viaje& v) { return v.pcs; });
+    grupos.construir();
+
+    Caja bbox(-0.01, -0.01, 0.51, 0.01);
+    auto sim = grupos.nSimilares(bbox, ref, 10);
+    CHECK(sim.size() == 10, "devuelve n=10");
+    bool todosEt1 = true;
+    for (uint32_t idx : sim) if (arbol.dato(idx).etiqueta != 1) todosEt1 = false;
+    CHECK(todosEt1, "prioridad 1: los 10 de la misma etiqueta del referente");
+    bool sinReferente = true;
+    for (uint32_t idx : sim) if (idx == ref) sinReferente = false;
+    CHECK(sinReferente, "el referente no aparece en resultados");
+
+    auto sim15 = grupos.nSimilares(bbox, ref, 15);
+    CHECK(sim15.size() == 15, "n=15 completa con otros grupos");
+    // centroides: etiqueta 0 -> {0} (dist 5 de {5}); etiqueta 2 -> {9} (dist 4)
+    // => los 5 extra deben venir de etiqueta 2
+    int deEt2 = 0;
+    for (size_t i = 10; i < 15; i++) if (arbol.dato(sim15[i]).etiqueta == 2) deEt2++;
+    CHECK(deEt2 == 5, "los extra vienen del grupo con centroide mas cercano (etiqueta 2)");
+}
+
 int main() {
     cout << "=== Tests rstarLib ===" << endl;
     test_caja();
@@ -251,6 +287,7 @@ int main() {
     test_hojas_version();
     test_indice_por_id();
     test_grupos();
+    test_n_similares();
     cout << "\n=== Resultado: " << (fallos == 0 ? "TODOS PASAN" : to_string(fallos) + " FALLOS") << " ===" << endl;
     return fallos == 0 ? 0 : 1;
 }
