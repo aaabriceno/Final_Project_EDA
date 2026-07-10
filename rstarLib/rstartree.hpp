@@ -76,6 +76,15 @@ public:
     T& dato(uint32_t idx) { return arena_[idx]; }
     size_t tamano() const { return n_puntos_; }
 
+    std::vector<Resultado> buscarRango(const Caja& bbox) const {
+        std::vector<Resultado> res;
+        rangoRec(raiz_, bbox, res);
+        return res;
+    }
+    void recorrer(const std::function<void(const Resultado&)>& visita) const {
+        recorrerRec(raiz_, visita);
+    }
+
 private:
     struct Nodo {
         bool esHoja;
@@ -106,5 +115,20 @@ private:
         raiz_->entradas.push_back(e);
         raiz_->mbr.estirar(e.x, e.y);
         tocar(raiz_);
+    }
+
+    void rangoRec(const Nodo* n, const Caja& bbox, std::vector<Resultado>& res) const {
+        if (n == nullptr || !n->mbr.interseca(bbox)) return;
+        if (n->esHoja) {
+            for (const auto& e : n->entradas)
+                if (bbox.contiene(e.x, e.y)) res.push_back(e);
+        } else {
+            for (const Nodo* h : n->hijos) rangoRec(h, bbox, res);
+        }
+    }
+    void recorrerRec(const Nodo* n, const std::function<void(const Resultado&)>& v) const {
+        if (n == nullptr) return;
+        if (n->esHoja) { for (const auto& e : n->entradas) v(e); }
+        else for (const Nodo* h : n->hijos) recorrerRec(h, v);
     }
 };

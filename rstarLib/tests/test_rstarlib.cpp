@@ -37,10 +37,25 @@ static void test_esqueleto() {
     CHECK(exploto, "ctor valida 2 <= m <= M/2");
 }
 
+static void test_rango_y_recorrido() {
+    cout << "\nT3: buscarRango y recorrer" << endl;
+    RStarTree2D<int> arbol(8, 3);
+    for (int i = 0; i < 6; i++) arbol.insertar(i * 1.0, i * 1.0, i * 10);
+    auto res = arbol.buscarRango(Caja(1.5, 1.5, 4.5, 4.5));
+    CHECK(res.size() == 3, "rango [1.5,4.5]^2 devuelve 3 (los puntos 2,3,4)");
+    bool datosOk = true;
+    for (const auto& r : res) if (arbol.dato(r.idx) != (int)(r.x) * 10) datosOk = false;
+    CHECK(datosOk, "idx de resultados apunta al dato correcto");
+    int visitados = 0;
+    arbol.recorrer([&](const RStarTree2D<int>::Resultado&) { visitados++; });
+    CHECK(visitados == 6, "recorrer visita los 6 puntos");
+}
+
 int main() {
     cout << "=== Tests rstarLib ===" << endl;
     test_caja();
     test_esqueleto();
+    test_rango_y_recorrido();
     cout << "\n=== Resultado: " << (fallos == 0 ? "TODOS PASAN" : to_string(fallos) + " FALLOS") << " ===" << endl;
     return fallos == 0 ? 0 : 1;
 }
