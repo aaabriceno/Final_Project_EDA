@@ -86,6 +86,32 @@ public:
         recorrerRec(raiz_, visita);
     }
 
+    // Elimina la PRIMERA entrada en (x, y) cuyo dato cumple el predicado.
+    // La arena conserva el dato (tombstone): dato(idx) sigue valido, pero el
+    // punto deja de existir en el indice espacial. Condensacion del paper:
+    // nodos con underflow se disuelven y sus entradas se reinsertan.
+    bool eliminar(double x, double y, const std::function<bool(const T&)>& coincide) {
+        if (raiz_ == nullptr) return false;
+        Nodo* hoja = nullptr;
+        int pos = -1;
+        buscarEntrada(raiz_, x, y, coincide, hoja, pos);
+        if (hoja == nullptr) return false;
+        hoja->entradas.erase(hoja->entradas.begin() + pos);
+        tocar(hoja);
+        n_puntos_--;
+        nivelReinsertado_.assign(64, false);
+        condensar(hoja);
+        // raiz interna con un solo hijo: acortar el arbol
+        while (raiz_ != nullptr && !raiz_->esHoja && raiz_->hijos.size() == 1) {
+            Nodo* h = raiz_->hijos[0];
+            raiz_->hijos.clear();
+            delete raiz_;
+            raiz_ = h;
+            h->padre = nullptr;
+        }
+        return true;
+    }
+
     // k vecinos mas cercanos a (x, y), ordenados de mas cercano a mas lejano.
     // Best-first sobre los MBRs con poda por el peor de los k hallados.
     std::vector<Resultado> kVecinos(double x, double y, int k) const {
@@ -485,6 +511,53 @@ private:
             if ((int)padre->hijos.size() > M_)
                 overflowTreatment(padre);   // el overflow puede cascadear
         }
+    }
+
+    void buscarEntrada(Nodo* n, double x, double y,
+                       const std::function<bool(const T&)>& coincide,
+                       Nodo*& hoja, int& pos) {
+        if (n == nullptr || hoja != nullptr || !n->mbr.contiene(x, y)) return;
+        if (n->esHoja) {
+            for (size_t i = 0; i < n->entradas.size(); i++) {
+                const auto& e = n->entradas[i];
+                if (e.x == x && e.y == y && coincide(arena_[e.idx])) {
+                    hoja = n;
+                    pos = (int)i;
+                    return;
+                }
+            }
+        } else {
+            for (Nodo* h : n->hijos) buscarEntrada(h, x, y, coincide, hoja, pos);
+        }
+    }
+
+    // Condensacion (delete del paper): subiendo desde la hoja, los nodos que
+    // quedan bajo m se quitan del padre y su contenido se reinserta al final.
+    void condensar(Nodo* n) {
+        std::vector<Resultado> huerfanas;
+        std::vector<Nodo*> huerfanos;
+        Nodo* actual = n;
+        while (actual != raiz_) {
+            Nodo* padre = actual->padre;
+            size_t cuenta = actual->esHoja ? actual->entradas.size() : actual->hijos.size();
+            if (cuenta < (size_t)m_) {
+                padre->hijos.erase(std::find(padre->hijos.begin(), padre->hijos.end(), actual));
+                if (actual->esHoja) {
+                    huerfanas.insert(huerfanas.end(), actual->entradas.begin(), actual->entradas.end());
+                    actual->entradas.clear();
+                } else {
+                    huerfanos.insert(huerfanos.end(), actual->hijos.begin(), actual->hijos.end());
+                    actual->hijos.clear();
+                }
+                delete actual;
+            } else {
+                actualizarMBR(actual);
+            }
+            actual = padre;
+        }
+        actualizarMBR(raiz_);
+        for (const auto& e : huerfanas) insertarEntrada(e);
+        for (Nodo* s : huerfanos) insertarSubarbol(s);
     }
 
     void rangoRec(const Nodo* n, const Caja& bbox, std::vector<Resultado>& res) const {

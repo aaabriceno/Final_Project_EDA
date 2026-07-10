@@ -117,6 +117,40 @@ static void test_knn() {
     CHECK(todos.size() == 300, "k > n devuelve todos");
 }
 
+static void test_eliminar() {
+    cout << "\nT6: eliminar con condensacion" << endl;
+    RStarTree2D<int> arbol(8, 3);
+    int id = 0;
+    for (int i = 0; i < 25; i++)
+        for (int j = 0; j < 20; j++)
+            arbol.insertar(i * 0.01, j * 0.01, id++);
+
+    // borrar los 200 puntos de las primeras 10 filas (datos 0..199)
+    int borrados = 0;
+    for (int i = 0; i < 10; i++)
+        for (int j = 0; j < 20; j++)
+            if (arbol.eliminar(i * 0.01, j * 0.01, [](const int&) { return true; })) borrados++;
+    CHECK(borrados == 200, "borro exactamente 200");
+    CHECK(arbol.tamano() == 300, "tamano 300 tras borrar");
+    CHECK(!arbol.eliminar(9.9, 9.9, [](const int&) { return true; }), "punto inexistente devuelve false");
+
+    auto resto = arbol.buscarRango(Caja(-1, -1, 1, 1));
+    CHECK(resto.size() == 300, "quedan 300 en el indice");
+    bool ningunBorrado = true;
+    for (auto& r : resto) if (arbol.dato(r.idx) < 200) ningunBorrado = false;
+    CHECK(ningunBorrado, "ninguno de los borrados aparece");
+
+    Stats s;
+    arbol.inspeccionar([&](bool esHoja, int, int prof, const Caja&, size_t nE, size_t nH, bool esRaiz) {
+        size_t cuenta = esHoja ? nE : nH;
+        if (cuenta > 8) s.violMax++;
+        if (!esRaiz && cuenta < 3) s.violMin++;
+        if (esHoja) { s.minProf = min(s.minProf, prof); s.maxProf = max(s.maxProf, prof); }
+    });
+    CHECK(s.violMax == 0 && s.violMin == 0, "invariantes m/M se mantienen");
+    CHECK(s.minProf == s.maxProf, "hojas al mismo nivel tras borrar");
+}
+
 int main() {
     cout << "=== Tests rstarLib ===" << endl;
     test_caja();
@@ -124,6 +158,7 @@ int main() {
     test_rango_y_recorrido();
     test_invariantes();
     test_knn();
+    test_eliminar();
     cout << "\n=== Resultado: " << (fallos == 0 ? "TODOS PASAN" : to_string(fallos) + " FALLOS") << " ===" << endl;
     return fallos == 0 ? 0 : 1;
 }
