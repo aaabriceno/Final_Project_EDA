@@ -1,6 +1,7 @@
 // Tests de rstarLib. Correr: make test
 #include "../rstartree.hpp"
 #include "../indice_por_id.hpp"
+#include "../grupos_por_hoja.hpp"
 #include <iostream>
 #include <string>
 using namespace std;
@@ -199,6 +200,46 @@ static void test_indice_por_id() {
     CHECK(indice.buscar(2000).has_value(), "agregar() indexa insercion posterior");
 }
 
+struct Viaje { int id; int etiqueta; vector<double> pcs; };
+
+static void test_grupos() {
+    cout << "\nT9: GruposPorHoja e invalidacion" << endl;
+    RStarTree2D<Viaje> arbol(8, 3);
+    // 60 puntos en linea, etiqueta = i % 3
+    for (int i = 0; i < 60; i++)
+        arbol.insertar(i * 0.01, 0.0, Viaje{i, i % 3, {(double)(i % 3), 0.0}});
+
+    GruposPorHoja<Viaje, int> grupos(arbol,
+        [](const Viaje& v) { return v.etiqueta; },
+        [](const Viaje& v) { return v.pcs; });
+    grupos.construir();
+
+    auto gs = grupos.gruposEnRango(Caja(-1, -1, 1, 1));
+    CHECK(gs.size() == 3, "3 grupos fusionados por etiqueta en rango global");
+    size_t total = 0;
+    for (auto& g : gs) total += g.size();
+    CHECK(total == 60, "los 60 puntos repartidos en los grupos");
+    bool coherentes = true;
+    for (auto& g : gs) {
+        int et = arbol.dato(g[0]).etiqueta;
+        for (uint32_t idx : g) if (arbol.dato(idx).etiqueta != et) coherentes = false;
+    }
+    CHECK(coherentes, "cada grupo tiene una sola etiqueta");
+
+    // bbox parcial: solo los indices 0..9 (x <= 0.095)
+    auto parcial = grupos.gruposEnRango(Caja(-0.01, -0.01, 0.095, 0.01));
+    size_t enParcial = 0;
+    for (auto& g : parcial) enParcial += g.size();
+    CHECK(enParcial == 10, "bbox parcial filtra miembros fuera del rango");
+
+    // invalidacion perezosa: insertar tras construir
+    arbol.insertar(0.005, 0.0, Viaje{999, 0, {0.0, 0.0}});
+    auto gs2 = grupos.gruposEnRango(Caja(-1, -1, 1, 1));
+    size_t total2 = 0;
+    for (auto& g : gs2) total2 += g.size();
+    CHECK(total2 == 61, "grupo rearmado perezosamente tras insercion");
+}
+
 int main() {
     cout << "=== Tests rstarLib ===" << endl;
     test_caja();
@@ -209,6 +250,7 @@ int main() {
     test_eliminar();
     test_hojas_version();
     test_indice_por_id();
+    test_grupos();
     cout << "\n=== Resultado: " << (fallos == 0 ? "TODOS PASAN" : to_string(fallos) + " FALLOS") << " ===" << endl;
     return fallos == 0 ? 0 : 1;
 }
