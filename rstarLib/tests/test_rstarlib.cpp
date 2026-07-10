@@ -1,5 +1,6 @@
 // Tests de rstarLib. Correr: make test
 #include "../rstartree.hpp"
+#include "../indice_por_id.hpp"
 #include <iostream>
 #include <string>
 using namespace std;
@@ -179,6 +180,25 @@ static void test_hojas_version() {
     CHECK(halloClave && vDespues != vAntes, "la version de la hoja mutada cambio");
 }
 
+struct Registro { int id; double valor; };
+
+static void test_indice_por_id() {
+    cout << "\nT8: IndicePorId" << endl;
+    RStarTree2D<Registro> arbol(8, 3);
+    for (int i = 0; i < 100; i++)
+        arbol.insertar(i * 0.01, i * 0.02, Registro{1000 + i, i * 1.5});
+
+    IndicePorId<Registro, int> indice(arbol, [](const Registro& r) { return r.id; });
+    CHECK(indice.tamano() == 100, "indexo los 100");
+    auto idx = indice.buscar(1042);
+    CHECK(idx.has_value() && arbol.dato(*idx).id == 1042, "buscar(1042) llega al registro correcto");
+    CHECK(!indice.buscar(9999).has_value(), "id inexistente devuelve nullopt");
+
+    uint32_t nuevo = arbol.insertar(0.5, 0.5, Registro{2000, 7.0});
+    indice.agregar(arbol.dato(nuevo), nuevo);
+    CHECK(indice.buscar(2000).has_value(), "agregar() indexa insercion posterior");
+}
+
 int main() {
     cout << "=== Tests rstarLib ===" << endl;
     test_caja();
@@ -188,6 +208,7 @@ int main() {
     test_knn();
     test_eliminar();
     test_hojas_version();
+    test_indice_por_id();
     cout << "\n=== Resultado: " << (fallos == 0 ? "TODOS PASAN" : to_string(fallos) + " FALLOS") << " ===" << endl;
     return fallos == 0 ? 0 : 1;
 }
