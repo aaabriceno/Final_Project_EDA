@@ -51,11 +51,46 @@ static void test_rango_y_recorrido() {
     CHECK(visitados == 6, "recorrer visita los 6 puntos");
 }
 
+struct Stats {
+    int minProf = 1 << 30, maxProf = -1;
+    int violMax = 0, violMin = 0;
+};
+
+static void test_invariantes() {
+    cout << "\nT4: invariantes estructurales (500 puntos, M=8, m=3)" << endl;
+    RStarTree2D<int> arbol(8, 3);
+    int id = 0;
+    for (int i = 0; i < 25; i++)
+        for (int j = 0; j < 20; j++)
+            arbol.insertar(i * 0.01, j * 0.01, id++);
+
+    Stats s;
+    arbol.inspeccionar([&](bool esHoja, int, int prof, const Caja&, size_t nE, size_t nH, bool esRaiz) {
+        size_t cuenta = esHoja ? nE : nH;
+        if (cuenta > 8) s.violMax++;
+        if (!esRaiz && cuenta < 3) s.violMin++;
+        if (esRaiz && !esHoja && nH < 2) s.violMin++;
+        if (esHoja) { s.minProf = min(s.minProf, prof); s.maxProf = max(s.maxProf, prof); }
+    });
+    CHECK(s.violMax == 0, "ningun nodo supera M");
+    CHECK(s.violMin == 0, "todo nodo no-raiz >= m");
+    CHECK(s.minProf == s.maxProf, "hojas al mismo nivel");
+
+    auto todo = arbol.buscarRango(Caja(-1, -1, 1, 1));
+    vector<int> conteo(500, 0);
+    for (auto& r : todo) conteo[arbol.dato(r.idx)]++;
+    int perdidos = 0, duplicados = 0;
+    for (int c : conteo) { if (c == 0) perdidos++; if (c > 1) duplicados++; }
+    CHECK(perdidos == 0 && duplicados == 0, "sin perdida ni duplicados tras splits/reinserts");
+    CHECK(arbol.tamano() == 500, "tamano correcto");
+}
+
 int main() {
     cout << "=== Tests rstarLib ===" << endl;
     test_caja();
     test_esqueleto();
     test_rango_y_recorrido();
+    test_invariantes();
     cout << "\n=== Resultado: " << (fallos == 0 ? "TODOS PASAN" : to_string(fallos) + " FALLOS") << " ===" << endl;
     return fallos == 0 ? 0 : 1;
 }
