@@ -155,6 +155,21 @@ public:
         inspeccionarRec(raiz_, 0, true, f);
     }
 
+    // Vista de una hoja para caches externos (GruposPorHoja): la clave
+    // identifica la hoja y la version cambia con CADA mutacion de su contenido.
+    struct HojaVista {
+        uintptr_t clave;
+        uint64_t version;
+        const Caja& mbr;
+        const std::vector<Resultado>& entradas;
+    };
+    void visitarHojas(const std::function<void(const HojaVista&)>& f) const {
+        visitarHojasRec(raiz_, nullptr, f);
+    }
+    void visitarHojasEnRango(const Caja& bbox, const std::function<void(const HojaVista&)>& f) const {
+        visitarHojasRec(raiz_, &bbox, f);
+    }
+
 private:
     struct Nodo {
         bool esHoja;
@@ -579,5 +594,15 @@ private:
         if (n == nullptr) return;
         f(n->esHoja, n->nivel, prof, n->mbr, n->entradas.size(), n->hijos.size(), esRaiz);
         for (const Nodo* h : n->hijos) inspeccionarRec(h, prof + 1, false, f);
+    }
+    void visitarHojasRec(const Nodo* n, const Caja* filtro,
+                         const std::function<void(const HojaVista&)>& f) const {
+        if (n == nullptr) return;
+        if (filtro != nullptr && !n->mbr.interseca(*filtro)) return;
+        if (n->esHoja) {
+            f(HojaVista{(uintptr_t)n, n->version, n->mbr, n->entradas});
+        } else {
+            for (const Nodo* h : n->hijos) visitarHojasRec(h, filtro, f);
+        }
     }
 };

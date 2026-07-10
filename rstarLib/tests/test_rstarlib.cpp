@@ -151,6 +151,34 @@ static void test_eliminar() {
     CHECK(s.minProf == s.maxProf, "hojas al mismo nivel tras borrar");
 }
 
+static void test_hojas_version() {
+    cout << "\nT7: vistas de hojas y versiones" << endl;
+    RStarTree2D<int> arbol(8, 3);
+    for (int i = 0; i < 50; i++) arbol.insertar(i * 0.1, i * 0.1, i);
+    size_t total = 0;
+    int hojas = 0;
+    arbol.visitarHojas([&](const RStarTree2D<int>::HojaVista& h) { hojas++; total += h.entradas.size(); });
+    CHECK(total == 50, "las hojas contienen los 50 puntos");
+    CHECK(hojas > 1, "hubo splits (mas de una hoja)");
+
+    int enRango = 0;
+    arbol.visitarHojasEnRango(Caja(0, 0, 1.0, 1.0), [&](const RStarTree2D<int>::HojaVista&) { enRango++; });
+    CHECK(enRango >= 1 && enRango <= hojas, "visitarHojasEnRango filtra por bbox");
+
+    uint64_t vAntes = 0;
+    uintptr_t clave0 = 0;
+    arbol.visitarHojas([&](const RStarTree2D<int>::HojaVista& h) {
+        if (clave0 == 0) { clave0 = h.clave; vAntes = h.version; }
+    });
+    arbol.insertar(0.01, 0.01, 999);   // cae en la primera hoja
+    uint64_t vDespues = vAntes;
+    bool halloClave = false;
+    arbol.visitarHojas([&](const RStarTree2D<int>::HojaVista& h) {
+        if (h.clave == clave0) { vDespues = h.version; halloClave = true; }
+    });
+    CHECK(halloClave && vDespues != vAntes, "la version de la hoja mutada cambio");
+}
+
 int main() {
     cout << "=== Tests rstarLib ===" << endl;
     test_caja();
@@ -159,6 +187,7 @@ int main() {
     test_invariantes();
     test_knn();
     test_eliminar();
+    test_hojas_version();
     cout << "\n=== Resultado: " << (fallos == 0 ? "TODOS PASAN" : to_string(fallos) + " FALLOS") << " ===" << endl;
     return fallos == 0 ? 0 : 1;
 }
